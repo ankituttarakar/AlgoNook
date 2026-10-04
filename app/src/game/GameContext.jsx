@@ -1,4 +1,5 @@
 // AlgoNook — global game state: save data + derived progression
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { loadSave, writeSave, wipeSave } from './storage.js';
 import { levelFromXp, levelProgress, levelTitle } from './progression.js';
 import { updateSkillRecord } from './mastery.js';
