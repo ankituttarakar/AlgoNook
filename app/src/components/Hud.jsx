@@ -1,7 +1,6 @@
-// Persistent top HUD: identity, level, XP, sound — always answers
-// "where am I, how far am I, what is next"
 import { useGame } from '../game/GameContext.jsx';
 import { sfx } from '../game/sfx.js';
+import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/react';
 
 export default function Hud({ location }) {
   const { save, level, levelInfo, title, toggleSound } = useGame();
@@ -34,6 +33,38 @@ export default function Hud({ location }) {
               </span>
             </div>
           </div>
+
+          {/* Clerk Auth Controls */}
+          <div className="flex items-center gap-2 border-l border-[var(--bb-line)] pl-3">
+            <Show when="signed-out">
+              <SignInButton mode="modal">
+                <button
+                  onClick={() => sfx.select()}
+                  className="bb-btn bb-btn-ghost !min-h-0 !px-2.5 !py-1 text-[11px]"
+                >
+                  Sign in
+                </button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button
+                  onClick={() => sfx.select()}
+                  className="bb-btn bb-btn-green !min-h-0 !px-2.5 !py-1 text-[11px]"
+                >
+                  Sign up
+                </button>
+              </SignUpButton>
+            </Show>
+            <Show when="signed-in">
+              <UserButton
+                appearance={{
+                  elements: {
+                    userButtonAvatarBox: 'w-7 h-7 border border-[var(--bb-green)]',
+                  },
+                }}
+              />
+            </Show>
+          </div>
+
           <button
             onClick={() => { toggleSound(); sfx.select(); }}
             className="bb-btn bb-btn-ghost !min-h-0 !px-2 !py-1 text-xs"
