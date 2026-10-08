@@ -2,6 +2,7 @@
 // Wrong taps are rejected with an explanation; the sequence rebuilds.
 import { useMemo, useState } from 'react';
 import { sfx } from '../game/sfx.js';
+import DiscoveryFrame from '../components/DiscoveryFrame.jsx';
 
 function shuffled(items) {
   const idx = items.map((_, i) => i);
@@ -50,9 +51,7 @@ export default function OrderChallenge({ challenge, onSolved, onMistake }) {
   };
 
   return (
-    <div>
-      <p className="mb-4 text-sm leading-relaxed text-[var(--bb-text)]">{challenge.q}</p>
-
+    <DiscoveryFrame context="SEQUENCE LAB" title="Rebuild the operation" objective={challenge.q}>
       {/* placed sequence */}
       <div className="mb-3 min-h-[44px] space-y-1.5 border border-dashed border-[var(--bb-line)] p-2">
         {placed.length === 0 && (
@@ -120,6 +119,6 @@ export default function OrderChallenge({ challenge, onSolved, onMistake }) {
           <span className="font-bold">✓ SEQUENCE VALID — </span>{challenge.why}
         </div>
       )}
-    </div>
+    </DiscoveryFrame>
   );
 }

@@ -1,5 +1,6 @@
-import { verifyToken } from '@clerk/backend';
 import { neon } from '@neondatabase/serverless';
+import { authenticateRequest } from './clerk-auth.ts';
+import { DEFAULT_CALLSIGN, normalizeCallsign } from '../src/lib/callsign.ts';
 
 export interface SyncUserPayload {
   email?: string | null;
@@ -42,47 +43,16 @@ export async function handleSyncUser(
     };
   }
 
-  // 1. Extract Bearer token from Authorization header or cookies
-  let token: string | undefined;
-  const authHeader = headers['authorization'] || headers['Authorization'];
-  if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
-    token = authHeader.slice(7).trim();
-  }
-
-  if (!token) {
-    const cookieHeader = headers['cookie'] || headers['Cookie'];
-    if (typeof cookieHeader === 'string') {
-      const match = cookieHeader.match(/__session=([^;]+)/);
-      if (match) {
-        token = match[1];
-      }
-    }
-  }
-
-  if (!token) {
-    return {
-      status: 401,
-      data: { ok: false, error: 'Unauthorized: Missing authentication token' },
-    };
-  }
-
-  // 2. Verify token with Clerk
+  // 1-2. Extract + verify the session token; user id comes ONLY from the verified JWT `sub`.
   let verifiedUserId: string;
   try {
-    const verified = await verifyToken(token, {
-      secretKey,
-    });
-    if (!verified || !verified.sub) {
-      return {
-        status: 401,
-        data: { ok: false, error: 'Unauthorized: Invalid token payload' },
-      };
-    }
-    verifiedUserId = verified.sub;
+    verifiedUserId = await authenticateRequest(headers, secretKey);
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!message.startsWith('Unauthorized')) console.warn(`[auth:sync-user] ${message}`);
     return {
       status: 401,
-      data: { ok: false, error: `Unauthorized: Token verification failed (${err instanceof Error ? err.message : String(err)})` },
+      data: { ok: false, error: 'Unauthorized: Invalid or expired authentication token' },
     };
   }
 
@@ -90,15 +60,19 @@ export async function handleSyncUser(
   try {
     const sql = neon(dbUrl);
     const { email, username, firstName } = body || {};
-    const callsign = (username || firstName || 'OPERATOR').slice(0, 32);
+    // First-touch seed only: same rules as /api/progress so the value the API
+    // returns on hydration is always one it will accept back on save.
+    const callsign = normalizeCallsign(username || firstName) ?? DEFAULT_CALLSIGN;
     const userEmail = email || null;
 
+    // callsign is seeded from Clerk on first insert only. On conflict it is
+    // left untouched: an explicit callsign chosen on the boot screen is user
+    // data and must survive re-syncs (verified via /api/progress saves).
     const rows = await sql`
       INSERT INTO users (clerk_id, callsign, email, updated_at)
       VALUES (${verifiedUserId}, ${callsign}, ${userEmail}, NOW())
       ON CONFLICT (clerk_id) 
       DO UPDATE SET 
-        callsign = COALESCE(EXCLUDED.callsign, users.callsign),
         email = COALESCE(EXCLUDED.email, users.email),
         updated_at = NOW()
       RETURNING id, clerk_id, callsign, email, created_at, updated_at;
@@ -108,10 +82,10 @@ export async function handleSyncUser(
       status: 200,
       data: { ok: true, user: rows[0] },
     };
-  } catch (err) {
+  } catch {
     return {
       status: 500,
-      data: { ok: false, error: err instanceof Error ? err.message : String(err) },
+      data: { ok: false, error: 'Unable to sync user.' },
     };
   }
 }

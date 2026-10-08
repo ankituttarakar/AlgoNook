@@ -3,6 +3,7 @@
 // Answers directly impact mastery state, not just XP.
 import { useState } from 'react';
 import { sfx } from '../game/sfx.js';
+import DiscoveryFrame from '../components/DiscoveryFrame.jsx';
 
 export default function ExplanationStage({ data, onComplete, onMistake }) {
   const { question, options } = data;
@@ -25,23 +26,7 @@ export default function ExplanationStage({ data, onComplete, onMistake }) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="border border-[var(--bb-line)] bg-black/40 p-4">
-        <div className="text-[10px] uppercase tracking-widest text-[var(--bb-amber)]">
-          Stage 7: Conceptual Explanation & Algorithmic Analysis
-        </div>
-        <h3 className="font-crt text-xl text-[var(--bb-green)] bb-glow mt-1">
-          REASONING & COMPLEXITY PROOF
-        </h3>
-        <p className="mt-1 text-xs text-[var(--bb-muted)]">
-          Proving why the algorithm works is essential for mastery advancement.
-        </p>
-      </div>
-
-      <div className="bb-panel p-5">
-        <p className="text-sm leading-relaxed text-[var(--bb-text)] font-semibold mb-4">
-          {question}
-        </p>
+    <DiscoveryFrame context="PROOF CHAMBER" title="Explain the signal" objective={question} evidence="Proving why an algorithm works is part of building durable mastery." evidenceLabel="Why this proof matters">
 
         <div className="space-y-2">
           {options.map((opt, i) => {
@@ -89,7 +74,6 @@ export default function ExplanationStage({ data, onComplete, onMistake }) {
             {options[picked].rationale}
           </div>
         )}
-      </div>
-    </div>
+    </DiscoveryFrame>
   );
 }

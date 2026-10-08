@@ -1,4 +1,4 @@
-// Mission briefing — story, intel (teaching), objectives, deploy
+// Mission briefing — context, learning notes, objectives, start
 import Type from '../components/Type.jsx';
 import { TOPIC_MAP } from '../data/topics.js';
 import { useGame } from '../game/GameContext.jsx';
@@ -43,7 +43,7 @@ export default function BriefScreen({ mission, onDeploy, onBack }) {
 
         <div className="mt-5 border-t border-[var(--bb-line)] pt-4">
           <div className="mb-2 text-[10px] uppercase tracking-widest text-[var(--bb-amber)]">
-            ▚ Intel decrypt
+            {mission.problemFlow ? 'PROBLEM NOTES' : '▚ Intel decrypt'}
           </div>
           <ul className="space-y-1.5 text-xs leading-relaxed text-[var(--bb-muted)]">
             {mission.intel.map((line, i) => (
@@ -56,8 +56,12 @@ export default function BriefScreen({ mission, onDeploy, onBack }) {
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-[var(--bb-line)] pt-4 text-xs">
-          <span className="text-[var(--bb-muted)]">OBJECTIVES:</span>
-          {mission.learningFlow ? (
+          <span className="text-[var(--bb-muted)]">{mission.problemFlow ? 'FOCUS:' : 'OBJECTIVES:'}</span>
+          {mission.problemFlow ? (
+            <span className="border border-[var(--bb-green)] text-[var(--bb-green)] px-2 py-1">
+              DSA PROBLEM WORKFLOW · 10 STEPS
+            </span>
+          ) : mission.learningFlow ? (
             <span className="border border-[var(--bb-green)] text-[var(--bb-green)] px-2 py-1">
               FULL LEARNING LOOP · 7 ACTIVE STAGES
             </span>
@@ -74,7 +78,7 @@ export default function BriefScreen({ mission, onDeploy, onBack }) {
           onClick={() => { sfx.unlock(); onDeploy(); }}
           className="bb-btn bb-btn-green anim-pulse-glow mt-6 w-full"
         >
-          ▶ Deploy — {mission.learningFlow ? 'Mastery Learning Mission' : `${mission.challenges?.length || 3} challenges`}
+          {mission.problemFlow ? 'Start problem-solving exercise' : `▶ Deploy — ${mission.learningFlow ? 'Mastery Learning Mission' : `${mission.challenges?.length || 3} challenges`}`}
         </button>
       </div>
     </div>

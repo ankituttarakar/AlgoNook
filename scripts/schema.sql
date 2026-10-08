@@ -78,3 +78,18 @@ CREATE TABLE IF NOT EXISTS mission_attempts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_mission_attempts_user_mission ON mission_attempts(user_id, mission_id);
+
+-- 6. Topic/Stage Progress (per-node stage completion for the learning loop)
+CREATE TABLE IF NOT EXISTS topic_progress (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  node_id VARCHAR(64) NOT NULL,
+  stages JSONB NOT NULL DEFAULT '{}'::jsonb,
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT uq_user_topic UNIQUE (user_id, node_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_topic_progress_user ON topic_progress(user_id);

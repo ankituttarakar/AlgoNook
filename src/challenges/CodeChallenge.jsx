@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { sfx } from '../game/sfx.js';
 import HintLadder from '../components/HintLadder.jsx';
+import DiscoveryFrame from '../components/DiscoveryFrame.jsx';
 
 export default function CodeChallenge({ data, onComplete, onMistake, onHintRevealed }) {
   const { prompt, blanks, codeTemplate, ladder = [] } = data;
@@ -44,20 +45,7 @@ export default function CodeChallenge({ data, onComplete, onMistake, onHintRevea
   };
 
   return (
-    <div className="space-y-4">
-      <div className="border border-[var(--bb-line)] bg-black/40 p-4">
-        <div className="text-[10px] uppercase tracking-widest text-[var(--bb-amber)]">
-          Stage 6: Code Implementation Challenge
-        </div>
-        <h3 className="font-crt text-xl text-[var(--bb-green)] bb-glow mt-1">
-          WRITE LINEAR SEARCH ALGORITHM
-        </h3>
-        <p className="mt-1 text-xs text-[var(--bb-text)] leading-relaxed">
-          {prompt}
-        </p>
-      </div>
-
-      <div className="bb-panel p-5">
+    <DiscoveryFrame context="IMPLEMENTATION BAY" title="Assemble the routine" objective={prompt}>
         {/* Code display with slot selector */}
         <div className="border border-[var(--bb-line)] bg-black/80 p-4 font-mono text-xs leading-relaxed text-zinc-300 overflow-x-auto">
           <div className="text-zinc-500 mb-2">// Complete the linear search implementation</div>
@@ -126,7 +114,6 @@ export default function CodeChallenge({ data, onComplete, onMistake, onHintRevea
         )}
 
         <HintLadder ladder={ladder} onHintRevealed={onHintRevealed} disabled={isCorrect} />
-      </div>
-    </div>
+    </DiscoveryFrame>
   );
 }

@@ -2,8 +2,11 @@
 // retry after wrong answers, and optional hint (costs the first-try bonus)
 import { useState } from 'react';
 import { sfx } from '../game/sfx.js';
+import DiscoveryFrame from '../components/DiscoveryFrame.jsx';
+import { useShuffledOptions } from '../game/answerOptions.js';
 
 export default function ChoiceChallenge({ challenge, onSolved, onMistake }) {
+  const options = useShuffledOptions(challenge.opts, challenge.q);
   const [wrong, setWrong] = useState([]); // indices answered wrongly
   const [picked, setPicked] = useState(null); // last picked index
   const [solved, setSolved] = useState(false);
@@ -12,7 +15,7 @@ export default function ChoiceChallenge({ challenge, onSolved, onMistake }) {
   const choose = (i) => {
     if (solved || wrong.includes(i)) return;
     setPicked(i);
-    const opt = challenge.opts[i];
+    const opt = options[i];
     if (opt.ok) {
       setSolved(true);
       sfx.correct();
@@ -24,20 +27,20 @@ export default function ChoiceChallenge({ challenge, onSolved, onMistake }) {
     }
   };
 
-  const feedback = picked != null ? challenge.opts[picked] : null;
+  const feedback = picked != null ? options[picked] : null;
 
   return (
-    <div>
-      {challenge.code && (
-        <pre className="mb-4 overflow-x-auto border border-[var(--bb-line)] bg-black/70 p-3 text-xs leading-relaxed text-[var(--bb-green)]">
-          {challenge.code}
-        </pre>
+    <DiscoveryFrame
+      context="MISSION SIGNAL"
+      title="Investigate the prompt"
+      objective={challenge.q}
+      evidence={challenge.code && (
+        <pre className="overflow-x-auto whitespace-pre-wrap text-[11px] leading-relaxed text-[var(--bb-green)]">{challenge.code}</pre>
       )}
-
-      <p className="mb-4 text-sm leading-relaxed text-[var(--bb-text)]">{challenge.q}</p>
-
+      evidenceLabel="Inspect source trace"
+    >
       <div className="space-y-2">
-        {challenge.opts.map((opt, i) => {
+        {options.map((opt, i) => {
           const isWrong = wrong.includes(i);
           const isRight = solved && opt.ok;
           return (
@@ -94,6 +97,6 @@ export default function ChoiceChallenge({ challenge, onSolved, onMistake }) {
           {!solved && <span className="mt-1 block text-[var(--bb-muted)]">Recalibrate and try again — remaining options are live.</span>}
         </div>
       )}
-    </div>
+    </DiscoveryFrame>
   );
 }

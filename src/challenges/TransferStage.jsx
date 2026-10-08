@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { sfx } from '../game/sfx.js';
 import HintLadder from '../components/HintLadder.jsx';
+import DiscoveryFrame from '../components/DiscoveryFrame.jsx';
 
 export default function TransferStage({ data, onComplete, onMistake, onHintRevealed }) {
   const { newDomainTitle, scenario, problemStatement, options, ladder = [] } = data;
@@ -25,30 +26,16 @@ export default function TransferStage({ data, onComplete, onMistake, onHintRevea
   };
 
   return (
-    <div className="space-y-4">
-      <div className="border border-[var(--bb-line)] bg-black/40 p-4">
-        <div className="text-[10px] uppercase tracking-widest text-[var(--bb-amber)]">
-          Stage 8: Knowledge Transfer Challenge
-        </div>
-        <h3 className="font-crt text-xl text-[var(--bb-green)] bb-glow mt-1">
-          {newDomainTitle || 'DOMAIN TRANSFER: ATTENDANCE LEDGER'}
-        </h3>
-        <p className="mt-1 text-xs text-[var(--bb-muted)]">
-          Can you recognize the same underlying algorithmic structure in a completely different scenario?
-        </p>
-      </div>
-
-      <div className="bb-panel p-5">
-        <div className="mb-4 border-l-2 border-[var(--bb-amber)] bg-[rgba(255,176,0,0.04)] p-3 text-xs leading-relaxed text-[var(--bb-text)]">
-          <div className="text-[10px] uppercase tracking-widest text-[var(--bb-amber)] mb-1">
-            New Context
-          </div>
-          {scenario}
-        </div>
-
-        <p className="text-sm leading-relaxed text-[var(--bb-text)] font-semibold mb-4">
-          {problemStatement}
-        </p>
+    <DiscoveryFrame
+      context="CROSS-SECTOR TRANSMISSION"
+      title={newDomainTitle || 'Domain transfer'}
+      objective={problemStatement}
+      evidence={<>
+        <p className="mb-2">Look for the same underlying algorithmic structure in this different scenario.</p>
+        <p>{scenario}</p>
+      </>}
+      evidenceLabel="Inspect the field report"
+    >
 
         <div className="space-y-2">
           {options.map((opt, i) => {
@@ -98,7 +85,6 @@ export default function TransferStage({ data, onComplete, onMistake, onHintRevea
         )}
 
         <HintLadder ladder={ladder} onHintRevealed={onHintRevealed} disabled={isAnswered} />
-      </div>
-    </div>
+    </DiscoveryFrame>
   );
 }

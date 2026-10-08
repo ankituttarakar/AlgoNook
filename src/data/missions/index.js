@@ -5,6 +5,9 @@ import c from './c.js';
 import d from './d.js';
 import e from './e.js';
 import { TOPICS } from '../topics.js';
+import { CODING_PROBLEMS, makeCodingMission } from '../codingProblems.js';
+
+const chapterCodingMissions = CODING_PROBLEMS.map(makeCodingMission);
 
 // Campaign order follows TOPICS order: all missions of sector 1, then 2, ...
 const byTopic = {};
@@ -12,15 +15,22 @@ for (const m of [...a, ...b, ...c, ...d, ...e]) {
   (byTopic[m.topic] ||= []).push(m);
 }
 
-export const MISSIONS = TOPICS.flatMap((t) => byTopic[t.id] || []);
+export const MISSIONS = [...TOPICS.flatMap((t) => byTopic[t.id] || []), ...chapterCodingMissions];
 export const MISSION_MAP = Object.fromEntries(MISSIONS.map((m) => [m.id, m]));
 
 export function missionsOfTopic(topicId) {
-  return byTopic[topicId] || [];
+  const exactChapter = chapterCodingMissions.filter((mission) => mission.chapter === topicId);
+  const byContentTopic = chapterCodingMissions.filter((mission) => mission.topic === topicId && !chapterCodingMissions.some((item) => item.chapter === topicId));
+  return [...(byTopic[topicId] || []), ...exactChapter, ...byContentTopic];
 }
 
 /** Linear campaign: mission i is unlocked when mission i−1 is cleared. */
 export function isUnlocked(missionId, cleared) {
+  const mission = MISSION_MAP[missionId];
+  if (mission?.codingProblem) {
+    const chapterMissions = byTopic[mission.topic] || [];
+    return chapterMissions.filter((item) => !item.codingProblem).every((item) => !!cleared[item.id]);
+  }
   const idx = MISSIONS.findIndex((m) => m.id === missionId);
   if (idx <= 0) return true;
   return !!cleared[MISSIONS[idx - 1].id];
