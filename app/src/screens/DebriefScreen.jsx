@@ -5,11 +5,11 @@ import { useGame } from '../game/GameContext.jsx';
 import { levelTitle } from '../game/progression.js';
 import { sfx } from '../game/sfx.js';
 
-export default function DebriefScreen({ result, onNext, onReplay, onMap }) {
+export default function DebriefScreen({ result, onNext, onReplay, onMap, onReview }) {
   const { cleared, completeMission, skills } = useGame();
   const { mission, earned, bonus, total, stars, mistakes, replay, levelUps } = result;
 
-  // record the clear once, on mount
+  // record the clear once, on mount (persists via GameContext sync engine)
   useEffect(() => {
     completeMission(mission.id, stars, mistakes);
     sfx.unlock();
@@ -111,12 +111,15 @@ export default function DebriefScreen({ result, onNext, onReplay, onMap }) {
           </div>
         ))}
 
-        <div className="mt-7 grid gap-2 sm:grid-cols-3">
+        <div className="mt-7 grid gap-2 sm:grid-cols-2">
           <button onClick={() => { sfx.select(); onReplay(); }} className="bb-btn bb-btn-ghost text-xs">
             ↺ Replay
           </button>
           <button onClick={() => { sfx.select(); onMap(); }} className="bb-btn bb-btn-ghost text-xs">
             Sector map
+          </button>
+          <button onClick={() => { sfx.select(); onReview(); }} className="bb-btn bb-btn-ghost text-xs">
+            Review mastery
           </button>
           {next ? (
             <button onClick={() => { sfx.unlock(); onNext(next); }} className="bb-btn bb-btn-green text-xs">

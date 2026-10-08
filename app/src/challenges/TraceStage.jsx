@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { sfx } from '../game/sfx.js';
 import HintLadder from '../components/HintLadder.jsx';
+import DiscoveryFrame from '../components/DiscoveryFrame.jsx';
 
 export default function TraceStage({ data, onComplete, onHintRevealed }) {
   const { array, target, ladder = [] } = data;
@@ -40,21 +41,13 @@ export default function TraceStage({ data, onComplete, onHintRevealed }) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="border border-[var(--bb-line)] bg-black/40 p-4">
-        <div className="text-[10px] uppercase tracking-widest text-[var(--bb-amber)]">
-          Stage 5: Algorithm Trace & Invariant Simulation
-        </div>
-        <h3 className="font-crt text-xl text-[var(--bb-green)] bb-glow mt-1">
-          STEP-BY-STEP EXECUTION TRACE
-        </h3>
-        <p className="mt-1 text-xs text-[var(--bb-text)] leading-relaxed">
-          Simulate the CPU executing linear search. Target value = <strong className="text-[var(--bb-amber)]">#{target}</strong>.
-          Advance the pointer <span className="font-mono text-[var(--bb-green)]">i</span> step-by-step and observe how the loop evaluates the invariant.
-        </p>
-      </div>
-
-      <div className="bb-panel p-5">
+    <DiscoveryFrame
+      context="ARRAY SIMULATOR"
+      title="Trace the memory grid"
+      objective={<>Find <strong className="text-[var(--bb-amber)]">#{target}</strong> by advancing the pointer one cell at a time.</>}
+      evidence="At each index, compare the current value with the target. A match ends the scan; otherwise move to the next index."
+      evidenceLabel="Review scan protocol"
+    >
         {/* Memory Grid Visualization */}
         <div className="mb-4">
           <div className="text-[10px] uppercase tracking-widest text-[var(--bb-muted)] mb-2">
@@ -142,7 +135,6 @@ export default function TraceStage({ data, onComplete, onHintRevealed }) {
         )}
 
         <HintLadder ladder={ladder} onHintRevealed={onHintRevealed} />
-      </div>
-    </div>
+    </DiscoveryFrame>
   );
 }

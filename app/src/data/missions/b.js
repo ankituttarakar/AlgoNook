@@ -182,7 +182,7 @@ export default [
 
   // ───────────── 06 HASHING ─────────────
   {
-    id: 'hsh-1', topic: 'hashing', kind: 'standard', title: 'THE INSTANT LOOKUP',
+    id: 'hsh-1', topic: 'hashing', kind: 'standard', title: 'FREQUENCY MAP', skill: 'hashing-frequency', learningFlow: true,
     brief: 'The Index Vault answers any name in a single step. Its secret: a hash function that turns keys into addresses.',
     intel: [
       'A hash function maps any key to a slot index.',
@@ -209,6 +209,47 @@ export default [
         ['4', 'That would be hash("byte") (length 4). "bound" has length 5.'],
       ], { hint: 'Count the characters, then take modulo 5.' }),
     ],
+    problemFlow: {
+      id: 'HASHING · 001',
+      difficulty: 'Easy',
+      title: 'Build a Frequency Map',
+      steps: [
+        { id: 'problem', section: 'PROBLEM', heading: 'Count each key', type: 'problem', xpLabel: 'PROBLEM REVIEW', difficulty: 'easy', statement: 'Given a list of string keys, return a map from each distinct key to the number of times it appears.', constraints: ['0 ≤ values.length ≤ 100,000', 'Each key is a case-sensitive string of at most 256 characters', 'Return every distinct key exactly once with a positive integer count'], examples: [{ input: '["pear", "plum", "pear"]', output: '{"pear": 2, "plum": 1}', explanation: 'pear occurs twice and plum occurs once.' }, { input: '[]', output: '{}', explanation: 'An empty input produces an empty map.' }] },
+        { id: 'pattern', section: 'PATTERN', heading: 'Choose the state', type: 'choice', xpLabel: 'PATTERN SELECTION', nextLabel: 'Complexity', prompt: 'Which structure directly represents each distinct key and its running count?', options: [
+          { text: 'A hash map from key to frequency', correct: true, rationale: 'The key retrieves its current count so each occurrence can update it in expected O(1) time.' },
+          { text: 'A set of keys only', correct: false, rationale: 'A set records membership, but it does not preserve the count for each key.' },
+          { text: 'Compare every key with every earlier key', correct: false, rationale: 'This can count occurrences, but repeated rescans cost O(n²).' },
+        ] },
+        { id: 'complexity', section: 'COMPLEXITY', heading: 'State the trade-off', type: 'choice', xpLabel: 'COMPLEXITY ANALYSIS', nextLabel: 'Algorithm', prompt: 'For n input keys and k distinct keys, what are the expected time and auxiliary-space costs?', options: [
+          { text: 'Expected O(n) time and O(k) space', correct: true, rationale: 'Each key performs an expected constant-time map update, and the map stores only distinct keys.' },
+          { text: 'O(n²) time and O(1) space', correct: false, rationale: 'That describes pairwise rescanning, not direct map updates.' },
+          { text: 'O(log n) time and O(n) space', correct: false, rationale: 'Hash maps do not keep keys ordered for logarithmic operations.' },
+        ] },
+        { id: 'algorithm', section: 'ALGORITHM', heading: 'Order the map updates', type: 'order', xpLabel: 'ALGORITHM DESIGN', difficulty: 'med', challenge: { q: 'Build the frequency-counting pass in order.', items: ['Create an empty map from keys to counts.', 'Visit each key in the input once.', 'Increase that key’s stored count, treating a missing key as zero.', 'Return the completed map.'], why: 'The map invariant is that after each processed prefix, every key maps to exactly its frequency in that prefix.', hint: 'A new key starts at zero before the current occurrence is counted.' } },
+        { id: 'implementation', section: 'IMPLEMENTATION', heading: 'Implement the frequency map', type: 'implementation', xpLabel: 'IMPLEMENTATION', difficulty: 'hard', challenge: { problemId: 'frequency-map', executionLabel: 'Frequency Map Builder', prompt: 'Implement countFrequencies(values). Return a mapping from each case-sensitive string to its count.', starter: 'function countFrequencies(values) {\n  // Build and return the frequency map\n}', starterCodeByLanguage: { python: 'def countFrequencies(values):\n    counts = {}\n    for value in values:\n        counts[value] = counts.get(value, 0) + 1\n    return counts\n' }, requirements: [
+          { id: 'state', label: 'Initialize a key-to-count map', pattern: '(?:const|let|var)\\s+counts\\s*=\\s*new\\s+Map\\s*\\(' },
+          { id: 'traverse', label: 'Visit each input key once', pattern: 'for\\s*\\([^)]*\\bof\\s+values\\b' },
+          { id: 'update', label: 'Increment the current key frequency', pattern: 'counts\\s*\\.\\s*set\\s*\\(\\s*value\\s*,' },
+          { id: 'read', label: 'Read the existing count before incrementing', pattern: 'counts\\s*\\.\\s*get\\s*\\(\\s*value\\s*\\)' },
+          { id: 'return', label: 'Return the frequency map', pattern: 'return\\s+Object\\.fromEntries\\s*\\(\\s*counts\\s*\\)' },
+        ] } },
+        { id: 'tests', section: 'TESTS', heading: 'Reason through edge cases', type: 'tests', xpLabel: 'TEST REVIEW', difficulty: 'med', cases: [
+          { nums: [], inputDisplay: '[]', prompt: 'No keys arrive. What should the map contain?', options: [{ text: '{}', correct: true, rationale: 'No keys means no map entries.' }, { text: '{"undefined": 1}', correct: false, rationale: 'No key was processed, so no entry should be created.' }] },
+          { nums: ['pear', 'pear'], inputDisplay: '["pear", "pear"]', prompt: 'The same key appears twice. What count should pear have?', options: [{ text: '2', correct: true, rationale: 'Each occurrence adds one to the stored count.' }, { text: '1', correct: false, rationale: 'That would lose the second occurrence.' }] },
+          { nums: ['A', 'a', 'A'], inputDisplay: '["A", "a", "A"]', prompt: 'Are "A" and "a" the same key?', options: [{ text: 'No; keys are case-sensitive, so A: 2 and a: 1.', correct: true, rationale: 'String keys preserve case, and each key receives its own count.' }, { text: 'Yes; combine them into one count of 3.', correct: false, rationale: 'The specification makes keys case-sensitive.' }] },
+        ] },
+        { id: 'explain', section: 'EXPLAIN', heading: 'Explain the invariant', type: 'choice', xpLabel: 'INVARIANT EXPLANATION', nextLabel: 'Transfer', prompt: 'After processing a prefix, what does counts[key] represent?', options: [
+          { text: 'The number of times key has appeared in that processed prefix.', correct: true, rationale: 'Each map update adds exactly one for the current key, preserving the prefix-frequency invariant.' },
+          { text: 'The most recent index where key appeared.', correct: false, rationale: 'That is a different map use: storing last-seen positions.' },
+          { text: 'The total number of distinct keys in the whole input.', correct: false, rationale: 'Each entry stores that key’s own frequency.' },
+        ] },
+        { id: 'transfer', section: 'TRANSFER', heading: 'Transfer to anagrams', type: 'choice', xpLabel: 'PATTERN TRANSFER', nextLabel: 'Finish', prompt: 'To group anagrams, how can a frequency map become a canonical key for each word?', options: [
+          { text: 'Build a character-frequency signature and group words with identical signatures.', correct: true, rationale: 'Anagrams have the same count for every character, so the signature is a stable grouping key.' },
+          { text: 'Use each word’s original index as the key.', correct: false, rationale: 'Indices do not capture shared letter composition.' },
+          { text: 'Use only the word length as the key.', correct: false, rationale: 'Different non-anagram words can have equal lengths.' },
+        ] },
+      ],
+    },
   },
   {
     id: 'hsh-2', topic: 'hashing', kind: 'standard', title: 'SEEN BEFORE',

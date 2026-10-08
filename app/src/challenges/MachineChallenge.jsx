@@ -2,6 +2,7 @@
 // Input items enter in fixed order; pops/dequeues must reproduce the target tape.
 import { useState } from 'react';
 import { sfx } from '../game/sfx.js';
+import DiscoveryFrame from '../components/DiscoveryFrame.jsx';
 
 export default function MachineChallenge({ challenge, onSolved, onMistake }) {
   const { mode, input, target } = challenge;
@@ -61,9 +62,7 @@ export default function MachineChallenge({ challenge, onSolved, onMistake }) {
   };
 
   return (
-    <div>
-      <p className="mb-4 text-sm leading-relaxed text-[var(--bb-text)]">{challenge.q || `Drive the ${mode.toUpperCase()} so the output tape reads exactly:`}</p>
-
+    <DiscoveryFrame context={`${mode.toUpperCase()} SIMULATOR`} title="Operate the machine" objective={challenge.q || `Drive the ${mode.toUpperCase()} so the output tape reads exactly:`}>
       {/* target tape */}
       <div className="mb-4 flex flex-wrap items-center gap-1.5">
         <span className="mr-1 text-[10px] uppercase tracking-widest text-[var(--bb-muted)]">TARGET</span>
@@ -177,6 +176,6 @@ export default function MachineChallenge({ challenge, onSolved, onMistake }) {
           <span className="font-bold">✓ TAPE MATCHES — </span>{challenge.why}
         </div>
       )}
-    </div>
+    </DiscoveryFrame>
   );
 }

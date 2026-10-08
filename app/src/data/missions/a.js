@@ -31,7 +31,7 @@ export default [
     ],
   },
   {
-    id: 'arr-2', topic: 'arrays', kind: 'standard', title: 'THE TWO-POINTER GAMBIT',
+    id: 'arr-2', topic: 'two-pointers', kind: 'standard', title: 'THE TWO-POINTER GAMBIT', skill: 'two-pointers-pair-sum', learningFlow: true,
     brief: 'Two scout drones patrol the Grid from opposite ends. Move them correctly and problems that looked quadratic collapse into a single sweep.',
     intel: [
       'Two pointers sweeping toward each other turn many O(n²) searches into O(n).',
@@ -61,6 +61,46 @@ export default [
         code: 'const a = [1, 2, 3, 4, 5];\nlet i = 0, j = a.length - 1;\nwhile (i < j) {\n  [a[i], a[j]] = [a[j], a[i]];\n  i++; j--;\n}',
       }),
     ],
+    problemFlow: {
+      id: 'TWO POINTERS · 001', difficulty: 'Easy', title: 'Two Sum in a Sorted Array',
+      steps: [
+        { id: 'problem', section: 'PROBLEM', heading: 'Read the contract', type: 'problem', xpLabel: 'PROBLEM REVIEW', difficulty: 'easy', statement: 'Given a non-decreasing integer array and a target, return the two distinct indices whose values sum to target. Return an empty array when no pair exists.', constraints: ['2 ≤ nums.length ≤ 100,000', 'nums is sorted in non-decreasing order', 'Return indices i < j; do not reuse an element'], examples: [{ input: 'nums = [1, 3, 5, 7, 9], target = 10', output: '[0, 4]', explanation: 'nums[0] + nums[4] = 1 + 9 = 10.' }, { input: 'nums = [1, 2, 4, 8], target = 20', output: '[]', explanation: 'The search interval narrows until no two distinct indices remain.' }] },
+        { id: 'pattern', section: 'PATTERN', heading: 'Choose the pattern', type: 'choice', xpLabel: 'PATTERN SELECTION', prompt: 'Which property makes an inward-moving pair of pointers useful here?', options: [
+          { text: 'Sorted order lets the current sum prove which side can be discarded.', correct: true, rationale: 'If the sum is too small, the current right value cannot pair with any smaller left-side value, so advance left.' },
+          { text: 'Every pair must be checked because sorting gives no information.', correct: false, rationale: 'Sorted order is precisely the evidence that lets each move eliminate candidates.' },
+          { text: 'The answer must use the two largest values.', correct: false, rationale: 'The target determines the pair; endpoints are only the first candidate.' },
+        ] },
+        { id: 'complexity', section: 'COMPLEXITY', heading: 'State the trade-off', type: 'choice', xpLabel: 'COMPLEXITY ANALYSIS', prompt: 'For n values, what are the costs of one inward scan?', options: [
+          { text: 'O(n) time and O(1) extra space.', correct: true, rationale: 'At least one pointer moves on each iteration, so there are at most n−1 checks and only two indices are stored.' },
+          { text: 'O(n²) time and O(1) extra space.', correct: false, rationale: 'That is the nested-loop baseline; the pointers eliminate one side per comparison.' },
+          { text: 'O(log n) time and O(n) extra space.', correct: false, rationale: 'The scan may visit linearly many candidates; it does not halve the interval.' },
+        ] },
+        { id: 'algorithm', section: 'ALGORITHM', heading: 'Build the invariant-preserving scan', type: 'order', xpLabel: 'ALGORITHM DESIGN', challenge: { q: 'Arrange the pair-sum loop steps.', items: ['Initialize left = 0 and right = nums.length - 1.', 'While left < right, compute nums[left] + nums[right].', 'Return the pair if the sum equals target.', 'If sum < target, increment left; otherwise decrement right.', 'Return [] after the pointers meet or cross.'], why: 'At each comparison the sorted order proves the discarded pairs cannot be valid. The active interval contains every remaining candidate.', hint: 'Keep the candidate interval explicit; equality returns before either pointer moves.' } },
+        { id: 'implementation', section: 'IMPLEMENTATION', heading: 'Implement the scan', type: 'implementation', xpLabel: 'IMPLEMENTATION', difficulty: 'hard', challenge: { problemId: 'two-sum-sorted', executionLabel: 'Two Sum in a Sorted Array', prompt: 'Implement twoSumSorted(nums, target). Return a pair of distinct indices or [] when none exists. Add algonook.step("compare" | "move-left" | "move-right" | "found" | "not-found", state) to see the state emitted by your running function.', starter: 'function twoSumSorted(nums, target) {\n  // Keep a candidate interval with two pointers\n}', starterCodeByLanguage: { python: 'def twoSumSorted(nums, target):\n    left, right = 0, len(nums) - 1\n    while left < right:\n        total = nums[left] + nums[right]\n        algonook.step("compare", {"array": nums, "left": left, "right": right, "target": target, "sum": total})\n        if total == target:\n            algonook.step("found", {"array": nums, "left": left, "right": right, "target": target, "sum": total})\n            return [left, right]\n        if total < target:\n            left += 1\n            algonook.step("move-left", {"array": nums, "left": left, "right": right, "target": target, "sum": total})\n        else:\n            right -= 1\n            algonook.step("move-right", {"array": nums, "left": left, "right": right, "target": target, "sum": total})\n    algonook.step("not-found", {"array": nums, "left": left, "right": right, "target": target})\n    return []\n' }, requirements: [
+          { id: 'left', label: 'Initialize a left pointer at the start', pattern: '\\bleft\\s*=\\s*0' },
+          { id: 'right', label: 'Initialize a right pointer at the final index', pattern: '\\bright\\s*=\\s*nums\\.length\\s*-\\s*1' },
+          { id: 'interval', label: 'Stop when pointers meet', pattern: 'while\\s*\\(\\s*left\\s*<\\s*right\\s*\\)' },
+          { id: 'sum', label: 'Compare the current values with target', pattern: 'nums\\s*\\[\\s*left\\s*\\]\\s*\\+\\s*nums\\s*\\[\\s*right\\s*\\]' },
+          { id: 'move', label: 'Move a pointer based on the sum comparison', pattern: 'left\\+\\+|left\\s*\\+=\\s*1|right--|right\\s*-=' },
+          { id: 'return', label: 'Return the matching indices', pattern: 'return\\s*\\[\\s*left\\s*,\\s*right\\s*\\]' },
+        ], ordering: { before: 'if (sum < target)', after: 'left++', label: 'Move left only after confirming the sum is too small.' } } },
+        { id: 'tests', section: 'TESTS', heading: 'Check boundaries and duplicates', type: 'tests', xpLabel: 'TEST REVIEW', cases: [
+          { nums: [1, 3, 5, 7, 9], inputDisplay: 'nums = [1, 3, 5, 7, 9], target = 10', prompt: 'What should the first endpoint check return?', options: [{ text: '[0, 4]', correct: true, rationale: 'The first and last values sum to 10.' }, { text: '[1, 3]', correct: false, rationale: 'Indices 1 and 3 sum to 10 too, but the contract returns the pair found by the algorithm; the endpoint pair is already valid.' }] },
+          { nums: [2, 2, 3], inputDisplay: 'nums = [2, 2, 3], target = 4', prompt: 'Can the two equal values form a valid answer?', options: [{ text: 'Yes: indices 0 and 1 are distinct.', correct: true, rationale: 'Equal values are allowed as long as the indices differ.' }, { text: 'No: values must be different.', correct: false, rationale: 'The contract requires distinct indices, not distinct values.' }] },
+          { nums: [-4, -1, 2, 6], inputDisplay: 'nums = [-4, -1, 2, 6], target = 1', prompt: 'After checking -4 + 6 = 2, which pointer moves?', options: [{ text: 'Move right left, because the sum is too large.', correct: true, rationale: 'Dropping the largest endpoint can lower the sum.' }, { text: 'Move left right.', correct: false, rationale: 'That raises the current sum further.' }] },
+        ] },
+        { id: 'explain', section: 'EXPLAIN', heading: 'Defend the invariant', type: 'choice', xpLabel: 'INVARIANT EXPLANATION', prompt: 'Why is it safe to increment left when nums[left] + nums[right] < target?', options: [
+          { text: 'With this right value and every smaller right value, the current left value cannot reach target; sorted order lets us discard those pairs.', correct: true, rationale: 'The comparison eliminates all pairs using this left index, so no valid candidate is lost.' },
+          { text: 'The smallest value is never part of a solution.', correct: false, rationale: 'A smallest value may be part of a valid pair; the current comparison is what determines the safe move.' },
+          { text: 'Both pointers should always move together.', correct: false, rationale: 'Moving both can skip valid pairs without evidence.' },
+        ] },
+        { id: 'transfer', section: 'TRANSFER', heading: 'Transfer to palindrome checking', type: 'choice', xpLabel: 'PATTERN TRANSFER', prompt: 'For a palindrome check, what changes in the invariant and pointer movement?', options: [
+          { text: 'Compare mirrored values; stop on mismatch, otherwise move both pointers inward.', correct: true, rationale: 'The pair-sum comparison is replaced by an equality condition on symmetric positions.' },
+          { text: 'Keep the sum comparison and move only the left pointer.', correct: false, rationale: 'Palindrome checking has no target sum or sorted-sum elimination rule.' },
+          { text: 'Sort the string before comparing.', correct: false, rationale: 'Sorting destroys character order, which defines a palindrome.' },
+        ] },
+      ],
+    },
   },
   {
     id: 'arr-3', topic: 'arrays', kind: 'boss', title: 'BREACH: THE MEMORY GRID',

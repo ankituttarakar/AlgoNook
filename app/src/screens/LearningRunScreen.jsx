@@ -18,6 +18,8 @@ import TraceStage from '../challenges/TraceStage.jsx';
 import CodeChallenge from '../challenges/CodeChallenge.jsx';
 import ExplanationStage from '../challenges/ExplanationStage.jsx';
 import TransferStage from '../challenges/TransferStage.jsx';
+import DiscoveryFrame from '../components/DiscoveryFrame.jsx';
+import DSAProblemFlow from './DSAProblemFlow.jsx';
 
 const STAGES = [
   { id: 'story', title: '1. MISSION BRIEF & STORY' },
@@ -78,7 +80,7 @@ export default function LearningRunScreen({ mission, onFinish, onAbort }) {
     }
   };
 
-  const finalizeMission = () => {
+  const finalizeMission = (sessionOverrides = {}) => {
     const bonus = replay ? Math.round(MISSION_BONUS * REPLAY_FACTOR) : MISSION_BONUS;
     const before = levelFromXp(save.xp);
     const after = levelFromXp(save.xp + bonus);
@@ -94,6 +96,7 @@ export default function LearningRunScreen({ mission, onFinish, onAbort }) {
       transferPassed,
       solvePassed: true,
       mistakes,
+      ...sessionOverrides,
     };
 
     // Update Skill Mastery & Spaced Review scheduling
@@ -113,6 +116,22 @@ export default function LearningRunScreen({ mission, onFinish, onAbort }) {
       skillStats: sessionStats,
     });
   };
+
+  if (mission.problemFlow) {
+    return (
+      <DSAProblemFlow
+        flow={mission.problemFlow}
+        onStageComplete={({ label, difficulty, firstTry }) => awardStageXp(label, difficulty, { firstTry })}
+        onMistake={handleMistake}
+        onHintRevealed={handleHintRevealed}
+        onAbort={onAbort}
+        onComplete={({ explanationFirstTry, transferFirstTry }) => finalizeMission({
+          explanationCorrect: explanationFirstTry,
+          transferPassed: transferFirstTry,
+        })}
+      />
+    );
+  }
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-24 pt-6">
@@ -166,24 +185,13 @@ export default function LearningRunScreen({ mission, onFinish, onAbort }) {
 
       {/* STAGE 1: Story / Context */}
       {currentStage.id === 'story' && (
-        <div className="space-y-4">
-          <div className="border border-[var(--bb-line)] bg-black/40 p-4">
-            <div className="text-[10px] uppercase tracking-widest text-[var(--bb-amber)]">
-              Stage 1: Sector Transmission
-            </div>
-            <h3 className="font-crt text-xl text-[var(--bb-green)] bb-glow mt-1">
-              {mission.story.location}
-            </h3>
-            <p className="mt-3 text-xs leading-relaxed text-[var(--bb-text)] font-mono">
-              {mission.story.transmission}
-            </p>
-          </div>
-
-          <div className="bb-panel p-5 space-y-4">
-            <div className="border-l-2 border-[var(--bb-green)] bg-[rgba(0,244,142,0.05)] p-3 text-xs text-[var(--bb-text)] leading-relaxed">
-              <strong className="text-[var(--bb-green)]">CORE DIRECTIVE:</strong> Investigate unsorted storage bays, uncover how a computer finds items when no index or sorting guarantees exist, and formulate the linear search algorithm.
-            </div>
-
+        <DiscoveryFrame
+          context="STAGE 1 · SECTOR TRANSMISSION"
+          title={mission.story.location}
+          objective="Investigate unsorted storage bays, uncover how a computer finds items when no index or sorting guarantees exist, and formulate the linear search algorithm."
+          evidence={mission.story.transmission}
+          evidenceLabel="Decrypt incoming transmission"
+        >
             <button
               onClick={() => {
                 awardStageXp('STORY BRIEF', 'easy', { firstTry: true });
@@ -193,8 +201,7 @@ export default function LearningRunScreen({ mission, onFinish, onAbort }) {
             >
               Enter Cargo Bay & Discover Concept ▶
             </button>
-          </div>
-        </div>
+        </DiscoveryFrame>
       )}
 
       {/* STAGE 2: Concept Discovery */}

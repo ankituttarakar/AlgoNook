@@ -2,6 +2,7 @@
 // Asks sequential prediction questions: Where to begin? What if not target? When to stop?
 import { useState } from 'react';
 import { sfx } from '../game/sfx.js';
+import DiscoveryFrame from '../components/DiscoveryFrame.jsx';
 
 export default function ThinkStage({ questions = [], onComplete, onMistake }) {
   const [qIdx, setQIdx] = useState(0);
@@ -39,23 +40,7 @@ export default function ThinkStage({ questions = [], onComplete, onMistake }) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="border border-[var(--bb-line)] bg-black/40 p-4">
-        <div className="text-[10px] uppercase tracking-widest text-[var(--bb-amber)]">
-          Stage 3: Think Challenge (Predictive Construction)
-        </div>
-        <h3 className="font-crt text-xl text-[var(--bb-green)] bb-glow mt-1">
-          MENTAL ALGORITHM MODEL · STEP {qIdx + 1}/{questions.length}
-        </h3>
-        <p className="mt-1 text-xs text-[var(--bb-muted)]">
-          Construct the core logic mentally before writing or tracing code.
-        </p>
-      </div>
-
-      <div className="bb-panel p-5">
-        <p className="text-sm leading-relaxed text-[var(--bb-text)] font-semibold mb-4">
-          {curQ.prompt}
-        </p>
+    <DiscoveryFrame context={`PREDICTION CONSOLE · ${qIdx + 1}/${questions.length}`} title="Form a hypothesis" objective={curQ.prompt} evidence="Construct the core logic mentally before writing or tracing code." evidenceLabel="Why predict first?">
 
         <div className="space-y-2">
           {curQ.options.map((opt, i) => {
@@ -104,7 +89,6 @@ export default function ThinkStage({ questions = [], onComplete, onMistake }) {
             {curQ.options[selected].rationale}
           </div>
         )}
-      </div>
-    </div>
+    </DiscoveryFrame>
   );
 }

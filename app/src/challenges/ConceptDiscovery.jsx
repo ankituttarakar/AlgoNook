@@ -2,6 +2,7 @@
 // Player scans warehouse cargo slots to build initial intuition before formal algorithms
 import { useState } from 'react';
 import { sfx } from '../game/sfx.js';
+import DiscoveryFrame from '../components/DiscoveryFrame.jsx';
 
 export default function ConceptDiscovery({ data, onComplete }) {
   const { target, slots, storyPrompt } = data;
@@ -25,20 +26,13 @@ export default function ConceptDiscovery({ data, onComplete }) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="border border-[var(--bb-line)] bg-black/40 p-4">
-        <div className="text-[10px] uppercase tracking-widest text-[var(--bb-amber)]">
-          Stage 2: Concept Discovery
-        </div>
-        <h3 className="font-crt text-xl text-[var(--bb-green)] bb-glow mt-1">
-          CARGO BAY SCAN: SEARCHING UNSORTED SECTOR
-        </h3>
-        <p className="mt-2 text-xs leading-relaxed text-[var(--bb-text)]">
-          {storyPrompt || `A crucial package with ID #${target} is misplaced somewhere among unsorted storage bays. Inspect the containers below to uncover its location.`}
-        </p>
-      </div>
-
-      <div className="bb-panel p-4">
+    <DiscoveryFrame
+      context="STAGE 2 · UNSORTED WAREHOUSE"
+      title="Scan the cargo bay"
+      objective={`Locate package #${target}. Select a sealed bay to inspect it.`}
+      evidence={storyPrompt || `A crucial package with ID #${target} is misplaced somewhere among unsorted storage bays. Inspect the containers below to uncover its location.`}
+      evidenceLabel="Inspect warehouse dispatch"
+    >
         <div className="mb-2 flex items-center justify-between text-xs">
           <span className="text-[var(--bb-muted)]">
             TARGET CRATE: <span className="font-bold text-[var(--bb-amber)] bb-glow-amber">#{target}</span>
@@ -92,7 +86,6 @@ export default function ConceptDiscovery({ data, onComplete }) {
             </button>
           </div>
         )}
-      </div>
-    </div>
+    </DiscoveryFrame>
   );
 }
