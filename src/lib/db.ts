@@ -115,8 +115,9 @@ export async function syncClerkUser(user: ClerkUserData, getToken: () => Promise
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      console.warn('[User Sync] Server sync error:', errData.error || res.statusText);
-      return { ok: false, error: errData.error || res.statusText };
+      const message = errData.error || res.statusText || `HTTP ${res.status}`;
+      console.warn('[User Sync] Server sync error:', message);
+      return { ok: false, error: message };
     }
 
     const data = await res.json();
@@ -149,10 +150,11 @@ export async function loadUserProgress(
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      console.warn('[Progress Sync] Server load error:', errData.error || res.statusText);
+      const message = errData.error || res.statusText || `HTTP ${res.status}`;
+      console.warn('[Progress Sync] Server load error:', message);
       return {
         ok: false,
-        error: errData.error || res.statusText,
+        error: message,
         status: res.status,
         unauthorized: res.status === 401,
       };
@@ -186,10 +188,11 @@ export async function saveUserProgress(
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      console.warn('[Progress Sync] Server save error:', errData.error || res.statusText);
+      const message = errData.error || res.statusText || `HTTP ${res.status}`;
+      console.warn('[Progress Sync] Server save error:', message);
       return {
         ok: false,
-        error: errData.error || res.statusText,
+        error: message,
         status: res.status,
         unauthorized: res.status === 401,
       };

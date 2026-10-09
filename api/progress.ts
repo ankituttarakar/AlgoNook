@@ -296,6 +296,7 @@ export async function handleGetProgress(
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const isUnauthorized = message.startsWith('Unauthorized');
+    if (!isUnauthorized) console.error('[progress:read] Neon progress load failed:', message);
     return {
       status: isUnauthorized ? 401 : 500,
       data: {
@@ -637,6 +638,7 @@ export async function handleSaveProgress(
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const isUnauthorized = message.startsWith('Unauthorized');
+    if (!isUnauthorized) console.error('[progress:write] Neon progress save failed:', message);
     return {
       status: isUnauthorized ? 401 : 500,
       data: {

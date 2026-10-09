@@ -82,7 +82,11 @@ export async function handleSyncUser(
       status: 200,
       data: { ok: true, user: rows[0] },
     };
-  } catch {
+  } catch (err) {
+    console.error(
+      '[sync-user] Neon user upsert failed:',
+      err instanceof Error ? err.message : String(err),
+    );
     return {
       status: 500,
       data: { ok: false, error: 'Unable to sync user.' },
