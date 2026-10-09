@@ -219,10 +219,10 @@ function AuthenticatedAppShell() {
   useEffect(() => {
     if (selectedNodeId && ROADMAP_NODES.some((node) => node.id === selectedNodeId)) startTopic(selectedNodeId);
   }, [selectedNodeId, startTopic]);
-  const continueChapter = (stage) => {
+  const continueChapter = (stage, nodeId = selectedNodeId) => {
     if (stage === 'review') return navigate('review');
     if (stage === 'problems') {
-      const node = ROADMAP_NODES.find((item) => item.id === selectedNodeId);
+      const node = ROADMAP_NODES.find((item) => item.id === nodeId);
       const mission = node && (node.missionTopics || (node.topicId ? [node.topicId] : [])).flatMap(missionsOfTopic).find((item) => !cleared[item.id] && isUnlocked(item.id, cleared));
       return mission ? navigate('brief', { mission }) : navigate('review');
     }
@@ -230,7 +230,7 @@ function AuthenticatedAppShell() {
       concept: 'concept', visualize: 'visualize', complexity: 'complexity', game: 'game',
       patterns: 'pattern', practice: 'practice',
     })[stage];
-    if (destination) navigate(destination, { nodeId: selectedNodeId });
+    if (destination) navigate(destination, { nodeId });
   };
   const handleHudNavigate = (target) => {
     if (target === 'home' || target === 'roadmap' || target === 'guidebook') return navigate(target);
@@ -329,7 +329,9 @@ function AuthenticatedAppShell() {
             onPractice={() => handleHudNavigate('practice')}
             onReview={() => navigate('review')}
             onGuidebook={() => navigate('guidebook')}
-            onContinueNode={(node) => navigate('topic', { nodeId: node.id })}
+            onContinueNode={(node, stage) => stage
+              ? continueChapter(stage, node.id)
+              : navigate('topic', { nodeId: node.id })}
           />
         )}
         {screen === 'guidebook' && <GuidebookScreen initialNodeId={selectedNodeId} onBack={() => navigate('roadmap')} />}

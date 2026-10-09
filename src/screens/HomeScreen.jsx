@@ -9,13 +9,17 @@ export default function HomeScreen({ onRoadmap, onPractice, onReview, onGuideboo
   const { save, cleared, skills, topics, level, levelInfo, title } = useGame();
   const reviewCount = Object.values(skills || {}).filter(isSkillReviewDue).length;
   const masteredCount = Object.values(skills || {}).filter((skill) => ['independent', 'retained'].includes(skill.masteryLevel)).length;
-  const currentNode = ROADMAP_NODES.find((node) => {
+  const stageIsComplete = (node, stage) => {
     const stageMap = topics?.[node.id]?.stages || {};
     const missions = (node.missionTopics || (node.topicId ? [node.topicId] : [])).flatMap(missionsOfTopic);
-    return node.learningStages?.some((stage) => stage === 'problems'
-      ? missions.length > 0 && !missions.every((mission) => !!cleared?.[mission.id])
-      : !stageMap[stage === 'patterns' ? 'pattern' : stage]);
-  }) || ROADMAP_NODES[0];
+    return stage === 'problems'
+      ? missions.length > 0 && missions.every((mission) => !!cleared?.[mission.id])
+      : !!stageMap[stage === 'patterns' ? 'pattern' : stage];
+  };
+  const currentNode = ROADMAP_NODES.find((node) =>
+    node.learningStages?.some((stage) => !stageIsComplete(node, stage))
+  ) || ROADMAP_NODES[0];
+  const currentStage = currentNode.learningStages?.find((stage) => !stageIsComplete(currentNode, stage)) || null;
   const clearedMissions = useMemo(() => Object.entries(cleared || {}).filter(([, record]) => !!record)
     .map(([id, record]) => ({ mission: MISSION_MAP[id], record }))
     .filter((item) => item.mission)
@@ -26,7 +30,7 @@ export default function HomeScreen({ onRoadmap, onPractice, onReview, onGuideboo
   return <main className="home-hub-shell">
     <section className="home-hub-hero floating-panel">
       <div><p className="eyebrow">PLAYER HEADQUARTERS / LEVEL {String(level).padStart(2, '0')}</p><h1>Welcome back,<br /><em>{save.callsign || 'learner'}.</em></h1><p>Your next step is ready in the algorithm world. Learn one idea, prove it with a trace, then carry it into a problem.</p>
-        <div className="home-hub-actions"><button className="bb-btn bb-btn-green" onClick={() => onContinueNode(currentNode)}>Continue {currentNode.label} →</button><button className="bb-btn bb-btn-ghost" onClick={onRoadmap}>View roadmap</button></div>
+        <div className="home-hub-actions"><button className="bb-btn bb-btn-green" onClick={() => onContinueNode(currentNode, currentStage)}>Continue {currentNode.label} →</button><button className="bb-btn bb-btn-ghost" onClick={onRoadmap}>View roadmap</button></div>
       </div>
       <div className="home-level-panel"><span className="home-level-orb">{String(level).padStart(2, '0')}</span><small>{title}</small><strong>{save.xp || 0} XP</strong><i><b style={{ width: `${xpPercent}%` }} /></i><small>{levelInfo.into} / {levelInfo.span} XP to next level</small></div>
     </section>
