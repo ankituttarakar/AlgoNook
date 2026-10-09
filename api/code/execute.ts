@@ -1,5 +1,5 @@
 import { getLanguageById } from '../../src/data/languages.js';
-import { authenticateRequest } from '../clerk-auth.ts';
+import { authenticateRequest } from '../clerk-auth.mjs';
 import { executePythonSandbox } from './pythonRunner.mjs';
 import { getCodeProblemById } from './problems/index.mjs';
 

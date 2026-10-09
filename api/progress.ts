@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless';
-import { authenticateRequest } from './clerk-auth.ts';
+import { authenticateRequest } from './clerk-auth.mjs';
 
 const VALID_MASTERY = new Set(['introduced', 'guided', 'practicing', 'independent', 'retained']);
 const VALID_TOPIC_STAGES = new Set(['concept', 'visualize', 'complexity', 'game', 'pattern', 'practice']);
@@ -10,7 +10,7 @@ const MAX_TOPICS = 100;
 
 // Callsign rules live in one place shared with the client (BootScreen input,
 // HUD display) so the UI and the API can never drift apart.
-import { DEFAULT_CALLSIGN, normalizeCallsign } from '../src/lib/callsign.ts';
+import { DEFAULT_CALLSIGN, normalizeCallsign } from '../src/lib/callsign.mjs';
 
 function validateCallsign(raw: unknown, outErrors: string[]): string | null {
   if (raw === undefined || raw === null) return null; // absent = keep existing

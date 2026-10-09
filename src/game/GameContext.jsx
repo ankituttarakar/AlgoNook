@@ -13,7 +13,7 @@ import { levelFromXp, levelProgress, levelTitle } from './progression.js';
 import { updateSkillRecord } from './mastery.js';
 import { setSoundEnabled } from './sfx.js';
 import { loadUserProgress, saveUserProgress } from '../lib/db.ts';
-import { DEFAULT_CALLSIGN, displayCallsign, normalizeCallsign } from '../lib/callsign.ts';
+import { DEFAULT_CALLSIGN, displayCallsign, normalizeCallsign } from '../lib/callsign.mjs';
 import { ROADMAP_NODE_MAP } from '../data/roadmap.js';
 
 const GameContext = createContext(null);

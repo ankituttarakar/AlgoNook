@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
-import { authenticateRequest } from './clerk-auth.ts';
-import { DEFAULT_CALLSIGN, normalizeCallsign } from '../src/lib/callsign.ts';
+import { authenticateRequest } from './clerk-auth.mjs';
+import { DEFAULT_CALLSIGN, normalizeCallsign } from '../src/lib/callsign.mjs';
 
 export interface SyncUserPayload {
   email?: string | null;
