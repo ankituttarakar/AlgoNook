@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useUser } from '@clerk/react';
 import { useGame } from '../game/GameContext.jsx';
 import { FloatingPanel } from '../components/PageScene.jsx';
@@ -9,6 +10,7 @@ const MASTERED = new Set(['independent', 'retained']);
 
 export default function ProfileScreen({ onBack, onReview }) {
   const { user } = useUser();
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState(null);
   const { save, level, title, skills, cleared } = useGame();
   const skillRecords = Object.values(skills || {});
   const masteredSkills = skillRecords.filter((item) => MASTERED.has(item.masteryLevel)).length;
@@ -18,6 +20,8 @@ export default function ProfileScreen({ onBack, onReview }) {
   const completedChapters = getCompletedChapterCount(save);
   const codingSolved = Object.entries(cleared || {}).filter(([id, record]) => !!record && MISSION_MAP[id]?.problemFlow).length;
   const displayName = user?.fullName || user?.username || save.callsign || 'Learner';
+  const avatarUrl = user?.imageUrl;
+  const showAvatarImage = avatarUrl && failedAvatarUrl !== avatarUrl;
   const masteryRank = (record) => MASTERY_LEVELS.indexOf(record?.masteryLevel || 'introduced');
   const strongest = Object.entries(skills || {}).filter(([, record]) => ['independent', 'retained'].includes(record.masteryLevel))
     .sort((a, b) => masteryRank(b[1]) - masteryRank(a[1]) || (b[1].successfulIndependentSolves || 0) - (a[1].successfulIndependentSolves || 0)).slice(0, 3);
@@ -32,7 +36,7 @@ export default function ProfileScreen({ onBack, onReview }) {
     <main className="profile-room scene-page-width">
       <button className="scene-back-link" onClick={onBack}>← Learning world</button>
       <FloatingPanel as="section" className="profile-identity">
-        <div className="profile-avatar" aria-hidden="true">{user?.imageUrl ? <img src={user.imageUrl} alt="" /> : (save.callsign || 'AN').slice(0, 2)}</div>
+        <div className="profile-avatar" aria-hidden="true">{showAvatarImage ? <img src={avatarUrl} alt="" onError={() => setFailedAvatarUrl(avatarUrl)} /> : (save.callsign || 'AN').slice(0, 2)}</div>
         <div className="profile-copy"><p className="scene-eyebrow">PLAYER ARCHIVE / VERIFIED ACCOUNT</p><h1>{displayName}</h1><p>Callsign <strong>{save.callsign || 'Not set'}</strong>{user?.primaryEmailAddress?.emailAddress ? ` · ${user.primaryEmailAddress.emailAddress}` : ''}</p></div>
         <div className="profile-rank"><small>CURRENT RANK</small><strong>{title}</strong><span>LEVEL {level}</span></div>
       </FloatingPanel>
