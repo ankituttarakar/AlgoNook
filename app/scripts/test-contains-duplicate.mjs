@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { CONTAINS_DUPLICATE_PROBLEM } from '../api/code/problems/containsDuplicate.mjs';
 import { FREQUENCY_MAP_PROBLEM } from '../api/code/problems/frequencyMap.mjs';
 import { TWO_SUM_SORTED_PROBLEM } from '../api/code/problems/twoSumSorted.mjs';
-import { executePythonSandbox } from '../api/code/pythonRunner.mjs';
+import { executePythonSandbox } from '../server/code/pythonRunner.mjs';
 
 const image = 'algonook-python-runner:3.12.11';
 const dockerInfo = spawnSync('docker', ['info', '--format', '{{.ServerVersion}}'], { encoding: 'utf8', windowsHide: true });

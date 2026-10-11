@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "db:migrate": "node scripts/migrate.js",
-    "runner:service": "node api/code/runner-service.mjs",
+    "runner:service": "node server/code/runner-service.mjs",
     "sandbox:build": "docker build -t algonook-python-runner:3.12.11 -f api/code/python-runner/Dockerfile api/code/python-runner",
     "test:sandbox": "node scripts/test-python-sandbox.mjs",
     "test:contains-duplicate": "node scripts/test-contains-duplicate.mjs",

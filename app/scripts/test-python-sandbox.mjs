@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { executePythonSandbox } from '../api/code/pythonRunner.mjs';
+import { executePythonSandbox } from '../server/code/pythonRunner.mjs';
 
 const image = 'algonook-python-runner:3.12.11';
 const dockerInfo = spawnSync('docker', ['info', '--format', '{{.ServerVersion}}'], { encoding: 'utf8', windowsHide: true });

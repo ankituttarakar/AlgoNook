@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getCodeProblemById } from './problems/index.mjs';
+import { getCodeProblemById } from '../../api/code/problems/index.mjs';
 import { executePythonSandbox } from './pythonRunner.mjs';
 import { verifyRunnerSignature, RUNNER_MAX_CLOCK_SKEW_MS } from './runnerProtocol.mjs';
 

@@ -1,4 +1,4 @@
-import type { ExecutionResponse } from './execute.js';
+import type { ExecutionResponse } from '../../api/code/execute.js';
 
 export function executePythonSandbox(request: {
   sourceCode: string;

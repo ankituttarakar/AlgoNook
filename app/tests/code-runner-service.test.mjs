@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { Readable } from 'node:stream';
 import test from 'node:test';
-import { createRunnerServer } from '../api/code/runner-service.mjs';
-import { createRunnerSignature } from '../api/code/runnerProtocol.mjs';
+import { createRunnerServer } from '../server/code/runner-service.mjs';
+import { createRunnerSignature } from '../server/code/runnerProtocol.mjs';
 import { executePythonJob } from '../api/code/runnerClient.mjs';
 import { handleExecuteCode } from '../api/code/execute.ts';
 import {
