@@ -6,6 +6,8 @@ import { getCodeProblemById } from '../code/problems/index.mjs';
 import { MISSION_MAP, missionsOfTopic } from '../../src/data/missions/index.js';
 import { GAME_LAB_BY_NODE } from '../../src/data/games/index.js';
 import { ROADMAP_NODE_MAP, ROADMAP_NODES } from '../../src/data/roadmap.js';
+// Vercel's isolated API typecheck omits the app tsconfig's allowImportingTsExtensions setting.
+// @ts-ignore
 import { handleGetProgress } from '../progress.ts';
 
 const MAX_SOURCE_BYTES = 64 * 1024;
