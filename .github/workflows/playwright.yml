@@ -1,27 +1,47 @@
-name: Playwright Tests
+name: CI
 on:
   push:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
 jobs:
-  test:
-    timeout-minutes: 60
+  validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: app
+    env:
+      CI: 'true'
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-node@v4
       with:
-        node-version: lts/*
+        node-version: 22
+        cache: npm
+        cache-dependency-path: app/package-lock.json
     - name: Install dependencies
       run: npm ci
-    - name: Install Playwright Browsers
-      run: npx playwright install --with-deps
-    - name: Run Playwright tests
-      run: npx playwright test
-    - uses: actions/upload-artifact@v4
-      if: ${{ !cancelled() }}
-      with:
-        name: playwright-report
-        path: playwright-report/
-        retention-days: 30
+    - name: Verify migration files
+      run: npm run db:migrate -- --check
+    - name: Run focused unit and API tests
+      run: node --test tests/*.test.mjs
+    - name: Type-check
+      run: npx tsc -b
+    - name: Build
+      run: npm run build
+    - name: Verify Vite starts from app/
+      run: |
+        npm run dev -- --host 127.0.0.1 > "$RUNNER_TEMP/algonook-vite.log" 2>&1 &
+        server_pid=$!
+        trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+        for attempt in $(seq 1 30); do
+          if curl --fail --silent http://127.0.0.1:3000/ --output /dev/null; then
+            exit 0
+          fi
+          sleep 1
+        done
+        cat "$RUNNER_TEMP/algonook-vite.log"
+        exit 1
