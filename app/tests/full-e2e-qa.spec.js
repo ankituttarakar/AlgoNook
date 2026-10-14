@@ -3,18 +3,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getPracticeForNode } from '../src/data/practice.js';
 import { MISSION_1_DATA } from '../src/data/missions/mission1Data.js';
+import { sanitizeUrl, sanitizeValue } from '../scripts/qa-safety.js';
 
-test.use({ storageState: 'auth.json', video: 'on', trace: 'on', screenshot: 'on' });
+test.use({ video: 'on', screenshot: 'on' });
 test.setTimeout(12 * 60 * 1000);
 
 test('AlgoNook full end-to-end browser QA', async ({ page }, testInfo) => {
   page.setDefaultTimeout(6000);
   const outDir = testInfo.outputDir;
-  const report = { startedAt: new Date().toISOString(), url: 'http://localhost:3000', checks: [], consoleErrors: [], pageErrors: [], networkFailures: [], httpErrors: [], pages: [] };
+  const report = { startedAt: new Date().toISOString(), url: sanitizeUrl(testInfo.project.use.baseURL || process.env.QA_BASE_URL || 'http://localhost:3000'), checks: [], consoleErrors: [], pageErrors: [], networkFailures: [], httpErrors: [], pages: [] };
   const heading = async () => await page.locator('h1').first().innerText({ timeout: 1500 }).catch(() => '');
   const snap = async (name) => {
-    const file = path.join(outDir, `${String(report.checks.length + 1).padStart(3, '0')}-${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`);
-    try { await page.screenshot({ path: file, fullPage: true, timeout: 15000 }); } catch {}
+    const directory = path.join(process.cwd(), 'test-results', 'screenshots');
+    fs.mkdirSync(directory, { recursive: true });
+    const file = path.join(directory, `${String(report.checks.length + 1).padStart(3, '0')}-${name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`);
+    await page.screenshot({ path: file, fullPage: true, timeout: 15000 });
     return file;
   };
   const check = async (name, fn, opts = {}) => {
@@ -68,13 +71,13 @@ test('AlgoNook full end-to-end browser QA', async ({ page }, testInfo) => {
     for (let i = n - 1; i >= 0; i--) if (await b.nth(i).isVisible().catch(() => false) && await b.nth(i).isEnabled().catch(() => false)) { await b.nth(i).click(); await page.waitForTimeout(450); return; }
     throw new Error('No visible enabled progression control');
   };
-  page.on('console', msg => { if (msg.type() === 'error') report.consoleErrors.push({ text: msg.text(), url: page.url() }); });
-  page.on('pageerror', e => report.pageErrors.push({ text: e.message, url: page.url() }));
-  page.on('requestfailed', req => report.networkFailures.push({ method: req.method(), url: req.url(), error: req.failure()?.errorText }));
-  page.on('response', res => { if (res.status() >= 400) res.text().then(text => report.httpErrors.push({ status: res.status(), url: res.url(), body: text.slice(0, 500) })).catch(() => report.httpErrors.push({ status: res.status(), url: res.url() })); });
+  page.on('console', msg => { if (msg.type() === 'error') report.consoleErrors.push({ text: msg.text(), url: sanitizeUrl(page.url()) }); });
+  page.on('pageerror', e => report.pageErrors.push({ text: e.message, url: sanitizeUrl(page.url()) }));
+  page.on('requestfailed', req => report.networkFailures.push({ method: req.method(), url: sanitizeUrl(req.url()), error: req.failure()?.errorText }));
+  page.on('response', res => { if (res.status() >= 400) report.httpErrors.push({ status: res.status(), url: sanitizeUrl(res.url()) }); });
 
   await check('authenticated landing or entry', async () => {
-    await page.goto('http://localhost:3000', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30000 });
     await page.waitForTimeout(2500);
     const text = await body();
     if (!/DSA Roadmap|Learning Roadmap|Sign in|Sign up|AlgoNook/i.test(text)) throw new Error('Neither authenticated roadmap nor a usable auth entry rendered');
@@ -254,8 +257,11 @@ test('AlgoNook full end-to-end browser QA', async ({ page }, testInfo) => {
     consoleErrors: report.consoleErrors.length, pageErrors: report.pageErrors.length,
     failedRequests: report.networkFailures.length, httpErrors: report.httpErrors.length,
   };
-  fs.writeFileSync(path.join(outDir, 'qa-report.json'), JSON.stringify(report, null, 2));
-  fs.writeFileSync(path.join(outDir, 'console-page-network.json'), JSON.stringify({ consoleErrors: report.consoleErrors, pageErrors: report.pageErrors, networkFailures: report.networkFailures, httpErrors: report.httpErrors }, null, 2));
+  fs.mkdirSync(outDir, { recursive: true });
+  const safeReport = sanitizeValue(report);
+  fs.writeFileSync(path.join(outDir, 'qa-report.json'), JSON.stringify(safeReport, null, 2));
+  fs.writeFileSync(path.join(outDir, 'console-page-network.json'), JSON.stringify(sanitizeValue({ consoleErrors: report.consoleErrors, pageErrors: report.pageErrors, networkFailures: report.networkFailures, httpErrors: report.httpErrors }), null, 2));
   console.log(JSON.stringify(report.summary));
   console.log(`QA_REPORT=${path.join(outDir, 'qa-report.json')}`);
+  if (report.summary.fail > 0) throw new Error(`QA audit recorded ${report.summary.fail} failed checks; see QA_REPORT.md and qa-report.json.`);
 });
