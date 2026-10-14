@@ -20,6 +20,8 @@ Browser
 
 The Vercel function never runs Docker or learner code. In production it requires `CODE_RUNNER_URL` and `CODE_RUNNER_SECRET`; if either is absent or invalid, execution fails closed with `SANDBOX_ERROR`. It does not fall back to local Docker in Vercel. Local Vite development may use Docker on the developer machine when `CODE_RUNNER_URL` is not configured.
 
+Coding mission and review submissions through `POST /api/progress/events` use the same per-user admission helper and limits as `/api/code/execute`. Before reserving a lease or running code, the event API checks the authenticated user's current reset generation and existing event idempotency key/reward key. Admission leases also carry those event identities, so concurrent duplicate submissions are rejected without incrementing the quota or starting another runner job. The lease remains held through the idempotent event write; retries of a completed event return the authoritative snapshot without using runner capacity. Final event persistence still enforces idempotency and reset-generation fencing atomically.
+
 ## Vercel API contract
 
 `POST /api/code/execute` requires an authenticated Clerk session and accepts exactly:
@@ -39,7 +41,7 @@ After authentication and validation, the API admits up to 12 executions per veri
 
 Run `npm run db:migrate` from `app/` against the intended database before enabling this version. The ordered migration is additive and is not applied automatically. Each verified Clerk user has one small admission row; it stores the current request window and at most two short-lived execution leases.
 
-The Vercel function sends only the selected problem ID, source, and trace flag to the execution service. The execution service independently resolves the problem ID using the trusted repository registry and supplies that problem's server-owned test cases to the existing sandbox. This prevents the browser from choosing tests or expected answers.
+The Vercel function sends only the selected problem ID, source, and trace flag to the execution service. The execution service independently resolves the problem ID using the trusted repository registry and supplies that problem's server-owned test cases to the existing sandbox. This prevents the browser from choosing tests or expected answers. The learning-event function allows up to 60 seconds so the 27-second bounded runner round trip leaves time for admission, trusted verification, persistence, and the authoritative snapshot refresh; configure the Vercel deployment plan to permit that function duration. The runner timeout and sandbox execution limits remain unchanged.
 
 The response shape remains compatible with the coding workspace: `ok`, normalized `status`, `summary`, `tests`, bounded `stdout`/`stderr`, `executionTimeMs`, optional error, and optional trace. The Vercel adapter bounds the response to 512 KiB and rejects malformed results. It does not award XP or mastery; those remain separate client-driven progress records and are not made authoritative by this execution boundary.
 
