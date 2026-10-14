@@ -2,6 +2,7 @@ import { neon } from '@neondatabase/serverless';
 import { authenticateRequest } from '../clerk-auth.mjs';
 import { checkDatabaseSchema } from '../schemaHealth.mjs';
 import { executePythonJob } from '../code/runnerClient.mjs';
+import { releaseCodeExecution, reserveCodeExecution } from '../code/executionAdmission.mjs';
 import { getCodeProblemById } from '../code/problems/index.mjs';
 import { MISSION_MAP, missionsOfTopic } from '../../src/data/missions/index.js';
 import { GAME_LAB_BY_NODE } from '../../src/data/games/index.js';
@@ -26,6 +27,7 @@ type LearningEventRequest = {
   sourceCode?: string;
   evidence?: unknown[];
   nodeId?: string;
+  hintLevelsUsed?: number[];
 };
 type SqlTag = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<any[]>;
 type EventOutcome = {
@@ -38,6 +40,7 @@ type EventOutcome = {
 type ApiResult = {
   status: number;
   data: EventOutcome | { ok: false; error: string; code?: string; generation?: number };
+  headers?: Record<string, string>;
 };
 
 function validUuid(value: unknown): value is string {
@@ -55,6 +58,12 @@ function exactKeys(value: Record<string, unknown>, allowed: string[]): boolean {
 
 function sameArray(left: unknown, right: unknown[]): boolean {
   return Array.isArray(left) && JSON.stringify(left) === JSON.stringify(right);
+}
+
+function validHintLevels(value: unknown): value is number[] {
+  return Array.isArray(value)
+    && value.length <= 6
+    && value.every((level, index) => Number.isInteger(level) && level === index + 1);
 }
 
 function nodeRequirementsForMission(missionId: string) {
@@ -171,6 +180,7 @@ function validateCodingEvidence(body: LearningEventRequest): {
       explanationCorrect,
       transferPassed,
       verifiedIndependent: true,
+      hintLevelsUsed: body.hintLevelsUsed || [],
     },
   };
 }
@@ -258,7 +268,7 @@ async function saveValidatedEvent(
             AND review_due_at = ${reviewDueAt} AND review_due_at <= NOW()
         ))
       ON CONFLICT DO NOTHING
-      RETURNING user_id, generation, mission_id, node_id, skill_id, xp_awarded, stars_awarded, event_type
+      RETURNING user_id, generation, mission_id, node_id, skill_id, xp_awarded, stars_awarded, event_type, metadata
     ),
     progress AS (
       INSERT INTO user_progress (user_id, xp, level, created_at, updated_at)
@@ -283,9 +293,24 @@ async function saveValidatedEvent(
     ),
     skill AS (
       INSERT INTO skill_mastery
-        (user_id, skill_id, mastery_level, attempts, successful_independent_solves, last_practiced_at, review_due_at, updated_at)
+        (user_id, skill_id, mastery_level, attempts, successful_independent_solves,
+         highest_hint_level_revealed, total_hints_used, ladder_reveals,
+         last_practiced_at, review_due_at, updated_at)
       SELECT user_id, skill_id, 'guided', 1,
         CASE WHEN metadata->>'verifiedIndependent' = 'true' THEN 1 ELSE 0 END,
+        COALESCE((
+          SELECT MAX(hint.level::integer)
+          FROM jsonb_array_elements_text(COALESCE(metadata->'hintLevelsUsed', '[]'::jsonb)) AS hint(level)
+        ), 0),
+        jsonb_array_length(COALESCE(metadata->'hintLevelsUsed', '[]'::jsonb)),
+        jsonb_build_array(
+          CASE WHEN COALESCE(metadata->'hintLevelsUsed', '[]'::jsonb) @> '[1]'::jsonb THEN 1 ELSE 0 END,
+          CASE WHEN COALESCE(metadata->'hintLevelsUsed', '[]'::jsonb) @> '[2]'::jsonb THEN 1 ELSE 0 END,
+          CASE WHEN COALESCE(metadata->'hintLevelsUsed', '[]'::jsonb) @> '[3]'::jsonb THEN 1 ELSE 0 END,
+          CASE WHEN COALESCE(metadata->'hintLevelsUsed', '[]'::jsonb) @> '[4]'::jsonb THEN 1 ELSE 0 END,
+          CASE WHEN COALESCE(metadata->'hintLevelsUsed', '[]'::jsonb) @> '[5]'::jsonb THEN 1 ELSE 0 END,
+          CASE WHEN COALESCE(metadata->'hintLevelsUsed', '[]'::jsonb) @> '[6]'::jsonb THEN 1 ELSE 0 END
+        ),
         NOW(), NOW() + INTERVAL '1 day', NOW()
       FROM inserted
       WHERE skill_id IS NOT NULL AND event_type IN ('mission_completed', 'review_completed')
@@ -301,6 +326,16 @@ async function saveValidatedEvent(
           ELSE skill_mastery.mastery_level
         END,
         successful_independent_solves = skill_mastery.successful_independent_solves + EXCLUDED.successful_independent_solves,
+        highest_hint_level_revealed = GREATEST(skill_mastery.highest_hint_level_revealed, EXCLUDED.highest_hint_level_revealed),
+        total_hints_used = skill_mastery.total_hints_used + EXCLUDED.total_hints_used,
+        ladder_reveals = jsonb_build_array(
+          COALESCE((skill_mastery.ladder_reveals->>0)::integer, 0) + (EXCLUDED.ladder_reveals->>0)::integer,
+          COALESCE((skill_mastery.ladder_reveals->>1)::integer, 0) + (EXCLUDED.ladder_reveals->>1)::integer,
+          COALESCE((skill_mastery.ladder_reveals->>2)::integer, 0) + (EXCLUDED.ladder_reveals->>2)::integer,
+          COALESCE((skill_mastery.ladder_reveals->>3)::integer, 0) + (EXCLUDED.ladder_reveals->>3)::integer,
+          COALESCE((skill_mastery.ladder_reveals->>4)::integer, 0) + (EXCLUDED.ladder_reveals->>4)::integer,
+          COALESCE((skill_mastery.ladder_reveals->>5)::integer, 0) + (EXCLUDED.ladder_reveals->>5)::integer
+        ),
         last_practiced_at = NOW(),
         review_due_at = NOW() + CASE
           WHEN skill_mastery.mastery_level IN ('introduced', 'guided') THEN INTERVAL '3 days'
@@ -380,7 +415,8 @@ export async function handleLearningEvent(
 
   if (!isRecord(body) || !validUuid(body.eventId) || !Number.isSafeInteger(body.generation)
     || (body.generation as number) < 0 || typeof body.type !== 'string' || !EVENT_TYPES.has(body.type)
-    || !exactKeys(body, ['eventId', 'generation', 'type', 'missionId', 'problemId', 'language', 'sourceCode', 'evidence', 'nodeId'])) {
+    || !exactKeys(body, ['eventId', 'generation', 'type', 'missionId', 'problemId', 'language', 'sourceCode', 'evidence', 'nodeId', 'hintLevelsUsed'])
+    || (body.hintLevelsUsed !== undefined && !validHintLevels(body.hintLevelsUsed))) {
     return { status: 400, data: { ok: false, error: 'Invalid learning event request.' } };
   }
 
@@ -424,6 +460,52 @@ export async function handleLearningEvent(
   if (typeof userId !== 'string') return { status: 500, data: { ok: false, error: 'Unable to record learning event.' } };
 
   const request = body as unknown as LearningEventRequest;
+  let priorById: any[];
+  try {
+    priorById = await sql`
+      SELECT progress.reset_generation AS generation, event.id
+      FROM user_progress AS progress
+      LEFT JOIN learning_events AS event
+        ON event.user_id = progress.user_id
+        AND event.generation = progress.reset_generation
+        AND event.idempotency_key = ${request.eventId}::uuid
+      WHERE progress.user_id = ${userId}
+      LIMIT 1;
+    `;
+  } catch (error) {
+    console.error('[progress:events] event identity lookup failed:', error instanceof Error ? error.message : error);
+    return { status: 500, data: { ok: false, error: 'Unable to validate learning event.' } };
+  }
+  const generationAtLookup = Number(priorById[0]?.generation);
+  if (!Number.isSafeInteger(generationAtLookup) || generationAtLookup < 0) {
+    return { status: 500, data: { ok: false, error: 'Unable to validate learning event.' } };
+  }
+  if (generationAtLookup !== request.generation) {
+    return {
+      status: 409,
+      data: {
+        ok: false,
+        error: 'This learning event belongs to an earlier progress generation.',
+        code: 'STALE_GENERATION',
+        generation: generationAtLookup,
+      },
+    };
+  }
+  if (priorById[0]?.id) {
+    const snapshot = await handleGetProgress(headers, env, {
+      authenticate: dependencies.authenticate,
+      createSql: dependencies.createSql,
+      checkSchema: dependencies.checkSchema,
+    });
+    if (snapshot.status !== 200 || !snapshot.data.ok) {
+      return { status: 500, data: { ok: false, error: 'Learning event was recorded but progress could not be refreshed.' } };
+    }
+    return {
+      status: 200,
+      data: { ok: true, duplicate: true, awardedXp: 0, stars: 0, snapshot: snapshot.data },
+    };
+  }
+
   let eventType: string;
   let eventKey: string;
   let missionId: string | null = null;
@@ -435,31 +517,14 @@ export async function handleLearningEvent(
   let requiredMissionIds: string[] = [];
   let requiresGame = false;
   let reviewDueAt: Date | null = null;
+  let codeProblem: ReturnType<typeof getCodeProblemById> | null = null;
 
   if ((request.type === 'mission_completed' || request.type === 'review_completed')
     && typeof request.missionId === 'string'
     && MISSION_MAP[request.missionId]?.problemFlow) {
     const validated = validateCodingEvidence(request);
     if (!validated) return { status: 400, data: { ok: false, error: 'Invalid coding mission evidence or reference.' } };
-    const codeProblem = getCodeProblemById(validated.problemId)!;
-    try {
-      const execution = await (dependencies.execute || executePythonJob)({
-        sourceCode: request.sourceCode!,
-        problem: codeProblem,
-        trace: false,
-        env,
-      });
-      if (execution.result.status !== 'PASSED'
-        || execution.result.summary.total <= 0
-        || execution.result.summary.passed !== execution.result.summary.total
-        || execution.result.tests.length !== execution.result.summary.total
-        || execution.result.tests.some((test) => test.status !== 'PASSED')) {
-        return { status: 422, data: { ok: false, error: 'The registered coding tests did not all pass.' } };
-      }
-    } catch (error) {
-      console.warn('[progress:events] trusted execution failed:', error instanceof Error ? error.message : error);
-      return { status: 503, data: { ok: false, error: 'Trusted code execution is unavailable.' } };
-    }
+    codeProblem = getCodeProblemById(validated.problemId)!;
     eventType = request.type;
     if (request.type === 'review_completed') {
       let dueRows: any[];
@@ -515,6 +580,106 @@ export async function handleLearningEvent(
     return { status: 400, data: { ok: false, error: 'Invalid learning event reference.' } };
   }
 
+  let priorEvent: any[];
+  try {
+    priorEvent = await sql`
+      SELECT progress.reset_generation AS generation, event.id
+      FROM user_progress AS progress
+      LEFT JOIN learning_events AS event
+        ON event.user_id = progress.user_id
+        AND event.generation = progress.reset_generation
+        AND event.event_type = ${eventType}
+        AND event.event_key = ${eventKey}
+      WHERE progress.user_id = ${userId}
+      LIMIT 1;
+    `;
+  } catch (error) {
+    console.error('[progress:events] event idempotency lookup failed:', error instanceof Error ? error.message : error);
+    return { status: 500, data: { ok: false, error: 'Unable to validate learning event.' } };
+  }
+  const currentGeneration = Number(priorEvent[0]?.generation);
+  if (!Number.isSafeInteger(currentGeneration) || currentGeneration < 0) {
+    return { status: 500, data: { ok: false, error: 'Unable to validate learning event.' } };
+  }
+  if (currentGeneration !== request.generation) {
+    return {
+      status: 409,
+      data: {
+        ok: false,
+        error: 'This learning event belongs to an earlier progress generation.',
+        code: 'STALE_GENERATION',
+        generation: currentGeneration,
+      },
+    };
+  }
+  if (priorEvent[0]?.id) {
+    const snapshot = await handleGetProgress(headers, env, {
+      authenticate: dependencies.authenticate,
+      createSql: dependencies.createSql,
+      checkSchema: dependencies.checkSchema,
+    });
+    if (snapshot.status !== 200 || !snapshot.data.ok) {
+      return { status: 500, data: { ok: false, error: 'Learning event was recorded but progress could not be refreshed.' } };
+    }
+    return {
+      status: 200,
+      data: { ok: true, duplicate: true, awardedXp: 0, stars: 0, snapshot: snapshot.data },
+    };
+  }
+
+  let admission: Awaited<ReturnType<typeof reserveCodeExecution>> | null = null;
+  const releaseAdmission = async () => {
+    if (!admission) return;
+    const leaseId = admission.leaseId;
+    admission = null;
+    try {
+      await (dependencies.release || releaseCodeExecution)(clerkId, leaseId, env);
+    } catch (error) {
+      console.error('[progress:events] execution admission lease cleanup failed:', error instanceof Error ? error.message : error);
+    }
+  };
+  if (codeProblem) {
+    try {
+      admission = await (dependencies.reserve || reserveCodeExecution)(clerkId, env, {
+        eventId: `${request.generation}:${request.eventId}`,
+        eventKey: `${request.generation}:${eventType}:${eventKey}`,
+      });
+    } catch {
+      console.error('[progress:events] execution admission is unavailable.');
+      return { status: 503, data: { ok: false, error: 'Trusted code execution is unavailable.' } };
+    }
+    if (!admission.admitted) {
+      return {
+        status: admission.duplicate ? 409 : 429,
+        headers: { 'Retry-After': String(admission.retryAfterSeconds) },
+        data: admission.duplicate
+          ? { ok: false, error: 'This learning event is already being verified. Retry shortly.', code: 'EVENT_IN_PROGRESS' }
+          : { ok: false, error: 'Execution limit reached. Please retry shortly.' },
+      };
+    }
+
+    try {
+      const execution = await (dependencies.execute || executePythonJob)({
+        sourceCode: request.sourceCode!,
+        problem: codeProblem,
+        trace: false,
+        env,
+      });
+      if (execution.result.status !== 'PASSED'
+        || execution.result.summary.total <= 0
+        || execution.result.summary.passed !== execution.result.summary.total
+        || execution.result.tests.length !== execution.result.summary.total
+        || execution.result.tests.some((test) => test.status !== 'PASSED')) {
+        await releaseAdmission();
+        return { status: 422, data: { ok: false, error: 'The registered coding tests did not all pass.' } };
+      }
+    } catch (error) {
+      await releaseAdmission();
+      console.warn('[progress:events] trusted execution failed:', error instanceof Error ? error.message : error);
+      return { status: 503, data: { ok: false, error: 'Trusted code execution is unavailable.' } };
+    }
+  }
+
   try {
     const persist = dependencies.persistEvent || saveValidatedEvent;
     const recorded = await persist(
@@ -534,6 +699,7 @@ export async function handleLearningEvent(
       requiresGame,
       reviewDueAt,
     );
+    await releaseAdmission();
     const outcome = recorded[0];
     if (!outcome) throw new Error('Learning event transaction returned no outcome.');
     if (outcome.outcome === 'stale') {
@@ -572,6 +738,8 @@ export async function handleLearningEvent(
   } catch (error) {
     console.error('[progress:events] atomic event persistence failed:', error instanceof Error ? error.message : error);
     return { status: 500, data: { ok: false, error: 'Unable to record learning event.' } };
+  } finally {
+    await releaseAdmission();
   }
 }
 
@@ -590,5 +758,8 @@ export default async function handler(req: any, res: any) {
     }
   }
   const result = await handleLearningEvent(body, req.headers, process.env);
+  for (const [name, value] of Object.entries(result.headers || {})) res.setHeader(name, value);
   return res.status(result.status).json(result.data);
 }
+
+export const config = { maxDuration: 60 };

@@ -70,6 +70,7 @@ export type LearningEventPayload =
       problemId?: string;
       language?: string;
       sourceCode?: string;
+      hintLevelsUsed?: number[];
       evidence: Array<{ type: string; answer: string | string[] } | { stepId: string; answer: string | string[] }>;
     }
   | {

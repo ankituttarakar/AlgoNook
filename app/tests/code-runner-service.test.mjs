@@ -209,6 +209,25 @@ test('local admission bounds active leases and request counts per verified user'
   assert.ok(overQuota.retryAfterSeconds >= 1);
 });
 
+test('local admission coalesces concurrent learning-event execution identities', async () => {
+  const userId = `learning-event-admission-${randomUUID()}`;
+  const env = { NODE_ENV: 'test' };
+  const requestIdentity = {
+    eventId: randomUUID(),
+    eventKey: 'mission_completed:mission:code-max-profit',
+  };
+  const first = await reserveCodeExecution(userId, env, requestIdentity);
+  const duplicate = await reserveCodeExecution(userId, env, requestIdentity);
+  assert.equal(first.admitted, true);
+  assert.equal(duplicate.admitted, false);
+  assert.equal(duplicate.duplicate, true);
+
+  await releaseCodeExecution(userId, first.leaseId, env);
+  const afterRelease = await reserveCodeExecution(userId, env, requestIdentity);
+  assert.equal(afterRelease.admitted, true);
+  await releaseCodeExecution(userId, afterRelease.leaseId, env);
+});
+
 test('production admission fails closed without shared storage', async () => {
   await assert.rejects(
     reserveCodeExecution(`production-admission-${randomUUID()}`, { NODE_ENV: 'production' }),
