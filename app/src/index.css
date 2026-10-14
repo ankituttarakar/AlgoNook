@@ -39,7 +39,7 @@ body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-even
   .bb-panel { background: linear-gradient(160deg, var(--bb-panel2), var(--bb-panel)); border: 1px solid var(--bb-line); box-shadow: 0 12px 30px rgba(0,0,0,.16), inset 0 1px rgba(255,255,255,.025); }
   .bb-glow { text-shadow: 0 0 16px rgba(194, 241, 122, .35); }
   .bb-glow-amber { text-shadow: 0 0 16px rgba(255, 173, 131, .3); }
-  .bb-btn { @apply inline-flex items-center justify-center gap-2 border px-4 py-2.5 text-sm font-bold transition-all duration-150 select-none; min-height: 44px; border-radius: 10px; box-shadow: 0 3px 0 rgba(0,0,0,.22); }
+  .bb-btn { @apply inline-flex items-center justify-center gap-2 border px-4 py-2.5 text-sm font-bold select-none; transition: color 150ms cubic-bezier(.4,0,.2,1), background-color 150ms cubic-bezier(.4,0,.2,1), border-color 150ms cubic-bezier(.4,0,.2,1), box-shadow 150ms cubic-bezier(.4,0,.2,1), opacity 150ms cubic-bezier(.4,0,.2,1); min-height: 44px; border-radius: 10px; box-shadow: 0 3px 0 rgba(0,0,0,.22); }
   .bb-btn-green { border-color: var(--bb-green); color: #14231c; background: linear-gradient(180deg, #d0fa8e, var(--bb-green)); }
   .bb-btn-green:hover:not(:disabled) { background: #d9ffa0; box-shadow: 0 7px 22px rgba(194, 241, 122, .17); }
   .bb-btn-amber { border-color: var(--bb-amber); color: var(--bb-amber); background: rgba(255, 173, 131, .07); }
