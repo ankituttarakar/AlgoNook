@@ -7,5 +7,14 @@ export type ExecutionAdmission =
   | { admitted: true; leaseId: string }
   | { admitted: false; retryAfterSeconds: number };
 
+export type SafeAdmissionDiagnostic = {
+  stage: 'configuration' | 'client_initialization' | 'reservation_query' | 'rejection_query' | 'lease_release';
+  category: 'configuration' | 'network' | 'database' | 'unknown';
+  errorType: 'NeonDbError' | 'Error' | 'TypeError' | 'ReferenceError' | 'ExecutionAdmissionFailure' | 'UnknownError';
+  code?: string;
+  sqlState?: string;
+};
+
+export function getSafeAdmissionDiagnostic(error: unknown): SafeAdmissionDiagnostic;
 export function reserveCodeExecution(userId: string, env?: NodeJS.ProcessEnv): Promise<ExecutionAdmission>;
 export function releaseCodeExecution(userId: string, leaseId: string, env?: NodeJS.ProcessEnv): Promise<void>;

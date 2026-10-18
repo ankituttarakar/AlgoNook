@@ -9,6 +9,7 @@ import { handleExecuteCode } from '../api/code/execute.ts';
 import {
   EXECUTION_CONCURRENCY_LIMIT,
   EXECUTION_REQUEST_LIMIT,
+  getSafeAdmissionDiagnostic,
   releaseCodeExecution,
   reserveCodeExecution,
 } from '../server/code/executionAdmission.mjs';
@@ -227,6 +228,55 @@ test('execution API enforces authenticated admission before invoking the runner'
   const resumed = await handleExecuteCode(request, {}, { CLERK_SECRET_KEY: 'test' }, dependencies);
   assert.equal(resumed.status, 200);
   assert.equal(runnerCalls, 3);
+});
+
+test('admission failures log only allowlisted diagnostics and return a generic response', async () => {
+  const request = {
+    language: 'python',
+    sourceCode: 'private learner source token=auth-secret',
+    problemId: 'contains-duplicate',
+  };
+  const failure = Object.assign(new Error('postgres://user:password@host/db?token=secret'), {
+    name: 'NeonDbError',
+    sourceError: Object.assign(new TypeError('fetch failed with credential=secret'), {
+      cause: Object.assign(new Error('private network details'), { code: 'ENOTFOUND' }),
+    }),
+    stage: 'reservation_query',
+  });
+  let runnerCalls = 0;
+  const logged = [];
+  const originalError = console.error;
+  console.error = (...args) => logged.push(args);
+  try {
+    const result = await handleExecuteCode(request, {}, { CLERK_SECRET_KEY: 'test-secret' }, {
+      authenticate: async () => 'verified-user',
+      reserve: async () => { throw failure; },
+      execute: async () => { runnerCalls += 1; throw new Error('must not run'); },
+    });
+    assert.deepEqual(result, { status: 503, data: { ok: false, error: 'Code execution API is unavailable.' } });
+  } finally {
+    console.error = originalError;
+  }
+
+  assert.equal(runnerCalls, 0);
+  assert.equal(logged.length, 1);
+  assert.deepEqual(logged[0][1], {
+    stage: 'reservation_query', category: 'network', errorType: 'NeonDbError', code: 'ENOTFOUND',
+  });
+  const diagnosticText = JSON.stringify(logged);
+  for (const secret of ['password', 'auth-secret', 'token=secret', 'private learner source', 'test-secret']) {
+    assert.equal(diagnosticText.includes(secret), false);
+  }
+
+  const arbitraryCode = Object.assign(new Error('sensitive exception message'), { code: 'credential=leaked' });
+  assert.deepEqual(getSafeAdmissionDiagnostic(arbitraryCode), {
+    stage: 'configuration', category: 'unknown', errorType: 'Error',
+  });
+  assert.deepEqual(getSafeAdmissionDiagnostic(Object.assign(new Error('private SQL details'), {
+    name: 'NeonDbError', code: '23505', stage: 'reservation_query',
+  })), {
+    stage: 'reservation_query', category: 'database', errorType: 'NeonDbError', sqlState: '23505',
+  });
 });
 
 test('local admission bounds active leases and request counts per verified user', async () => {

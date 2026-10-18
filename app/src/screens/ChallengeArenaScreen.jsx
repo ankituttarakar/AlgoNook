@@ -4,8 +4,8 @@ import { getPracticeRecommendations } from '../game/recommendations.js';
 import { FloatingPanel } from '../components/PageScene.jsx';
 import { MISSION_MAP } from '../data/missions/index.js';
 import { CODING_CHALLENGES, filterCodingChallenges, getChallengeStatus } from '../data/challengeCatalogue.js';
+import { resolveRoadmapNodeForMission } from '../data/missionEligibility.js';
 import { TOPIC_MAP } from '../data/topics.js';
-import { ROADMAP_NODES } from '../data/roadmap.js';
 
 function BattleCard({ mission, status, skills, onStartMission, onOpenPrerequisite, onChooseChapter }) {
   const record = skills[mission.skill];
@@ -13,9 +13,7 @@ function BattleCard({ mission, status, skills, onStartMission, onOpenPrerequisit
   const openPrerequisite = () => {
     if (nextPrerequisite?.kind === 'mission') {
       const mission = MISSION_MAP[nextPrerequisite.id];
-      const node = mission && ROADMAP_NODES.find((item) => item.id === mission.roadmapNodeId)
-        || mission && ROADMAP_NODES.find((item) => item.id === mission.chapter)
-        || mission && ROADMAP_NODES.find((item) => item.topicId === mission.topic || item.missionTopics?.includes(mission.topic));
+      const node = mission && resolveRoadmapNodeForMission(mission);
       if (node) onOpenPrerequisite(node.id);
       else onChooseChapter();
     } else if (nextPrerequisite?.kind === 'chapter') onOpenPrerequisite(nextPrerequisite.id);

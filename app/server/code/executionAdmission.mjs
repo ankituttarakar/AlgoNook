@@ -9,6 +9,58 @@ export const EXECUTION_LEASE_MS = 35_000;
 const MAX_LOCAL_USERS = 10_000;
 const localAdmission = new Map();
 
+const ADMISSION_STAGES = new Set(['configuration', 'client_initialization', 'reservation_query', 'rejection_query', 'lease_release']);
+const NETWORK_ERROR_CODES = new Set([
+  'ENOTFOUND', 'EAI_AGAIN', 'ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT',
+  'ECONNABORTED', 'EPIPE', 'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_SOCKET',
+]);
+
+class ExecutionAdmissionFailure extends Error {
+  constructor(stage, cause) {
+    super('Execution admission operation failed.');
+    this.name = 'ExecutionAdmissionFailure';
+    this.stage = ADMISSION_STAGES.has(stage) ? stage : 'configuration';
+    this.cause = cause;
+  }
+}
+
+function runAdmissionStage(stage, operation) {
+  return Promise.resolve().then(operation).catch((error) => {
+    if (error instanceof ExecutionAdmissionFailure) throw error;
+    throw new ExecutionAdmissionFailure(stage, error);
+  });
+}
+
+/** Returns fixed, non-sensitive fields only. Never include exception messages. */
+export function getSafeAdmissionDiagnostic(error) {
+  const stage = ADMISSION_STAGES.has(error?.stage) ? error.stage : 'configuration';
+  const cause = error instanceof ExecutionAdmissionFailure ? error.cause : error;
+  const chain = [];
+  let current = cause;
+  for (let depth = 0; current && depth < 4 && !chain.includes(current); depth += 1) {
+    chain.push(current);
+    current = current.cause || current.sourceError;
+  }
+  const causeName = chain[0]?.name;
+  const errorType = ['NeonDbError', 'Error', 'TypeError', 'ReferenceError'].includes(causeName)
+    ? causeName
+    : error instanceof ExecutionAdmissionFailure ? 'ExecutionAdmissionFailure' : 'UnknownError';
+  const codes = chain.map((item) => item?.code).filter((value) => typeof value === 'string');
+  const code = codes.find((value) => NETWORK_ERROR_CODES.has(value));
+  const sqlState = chain.map((item) => item?.sqlState).find((value) => typeof value === 'string' && /^[0-9A-Z]{5}$/.test(value));
+  const postgresCode = codes.find((value) => /^[0-9A-Z]{5}$/.test(value));
+  if (code) {
+    return { stage, category: 'network', errorType, code };
+  }
+  if (typeof sqlState === 'string' && /^[0-9A-Z]{5}$/.test(sqlState)) {
+    return { stage, category: 'database', errorType, sqlState };
+  }
+  if (postgresCode) {
+    return { stage, category: 'database', errorType, sqlState: postgresCode };
+  }
+  return { stage, category: errorType === 'ExecutionAdmissionFailure' && stage === 'configuration' ? 'configuration' : 'unknown', errorType };
+}
+
 function retryAfterSeconds(milliseconds) {
   return Math.max(1, Math.ceil(milliseconds / 1000));
 }
@@ -73,14 +125,16 @@ function reserveLocalExecution(userId, now, requestIdentity) {
 export async function reserveCodeExecution(userId, env = process.env, requestIdentity = null) {
   if (!env.DATABASE_URL) {
     if (env.NODE_ENV === 'production' || env.VERCEL === '1') {
-      throw new Error('Shared execution admission storage is unavailable.');
+      const failure = new ExecutionAdmissionFailure('configuration', null);
+      failure.message = 'Shared execution admission storage is unavailable.';
+      throw failure;
     }
     return reserveLocalExecution(userId, Date.now(), requestIdentity);
   }
 
-  const sql = neon(env.DATABASE_URL);
+  const sql = await runAdmissionStage('client_initialization', () => neon(env.DATABASE_URL));
   const leaseId = randomUUID();
-  const reserved = await sql`
+  const reserved = await runAdmissionStage('reservation_query', () => sql`
     INSERT INTO code_execution_admission
       (clerk_user_id, window_started_at, request_count, active_leases, updated_at)
     VALUES (
@@ -134,10 +188,10 @@ export async function reserveCodeExecution(userId, env = process.env, requestIde
         )
     )
     RETURNING clerk_user_id;
-  `;
+  `);
   if (reserved.length > 0) return { admitted: true, leaseId };
 
-  const rejected = await sql`
+  const rejected = await runAdmissionStage('rejection_query', () => sql`
     SELECT EXISTS (
       SELECT 1
       FROM jsonb_array_elements(active_leases) AS active_lease(value)
@@ -166,7 +220,7 @@ export async function reserveCodeExecution(userId, env = process.env, requestIde
     END AS retry_after_seconds
     FROM code_execution_admission
     WHERE clerk_user_id = ${userId};
-  `;
+  `);
   return {
     admitted: false,
     duplicate: rejected[0]?.duplicate === true,
@@ -179,8 +233,8 @@ export async function releaseCodeExecution(userId, leaseId, env = process.env) {
     localAdmission.get(userId)?.leases.delete(leaseId);
     return;
   }
-  const sql = neon(env.DATABASE_URL);
-  await sql`
+  const sql = await runAdmissionStage('client_initialization', () => neon(env.DATABASE_URL));
+  await runAdmissionStage('lease_release', () => sql`
     UPDATE code_execution_admission
     SET active_leases = COALESCE((
       SELECT jsonb_agg(active_lease.value)
@@ -189,5 +243,5 @@ export async function releaseCodeExecution(userId, leaseId, env = process.env) {
     ), '[]'::jsonb),
     updated_at = NOW()
     WHERE clerk_user_id = ${userId};
-  `;
+  `);
 }

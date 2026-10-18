@@ -1,7 +1,7 @@
 import { authenticateRequest } from '../../server/clerk-auth.mjs';
 import { checkDatabaseSchema } from '../../server/schemaHealth.mjs';
 import { executePythonJob, sandboxUnavailable } from '../../server/code/runnerClient.mjs';
-import { releaseCodeExecution, reserveCodeExecution } from '../../server/code/executionAdmission.mjs';
+import { getSafeAdmissionDiagnostic, releaseCodeExecution, reserveCodeExecution } from '../../server/code/executionAdmission.mjs';
 import { getCodeProblemById } from '../../server/code/problems/index.mjs';
 
 const MAX_SOURCE_BYTES = 64 * 1024;
@@ -102,8 +102,7 @@ async function getAuthenticatedUserId(
   try {
     return await authenticate(headers, secretKey);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    if (!message.startsWith('Unauthorized')) console.warn(`[auth:execute] ${message}`);
+    if (!(err instanceof Error && err.message.startsWith('Unauthorized'))) console.warn('[auth:execute] authentication failed.');
     return null;
   }
 }
@@ -144,7 +143,7 @@ export async function handleExecuteCode(
         env.DATABASE_URL,
       );
     } catch (error) {
-      console.error('[database:schema] execution health check failed:', error instanceof Error ? error.message : error);
+      console.error('[database:schema] execution health check failed.');
       return { status: 503, data: { ok: false, error: 'Database is unavailable.' } };
     }
     if (!schemaHealth.compatible) {
@@ -155,8 +154,8 @@ export async function handleExecuteCode(
   let admission;
   try {
     admission = await (dependencies.reserve || reserveCodeExecution)(userId, env);
-  } catch {
-    console.error('[code:execute] execution admission is unavailable.');
+  } catch (error) {
+    console.error('[code:execute] execution admission is unavailable.', getSafeAdmissionDiagnostic(error));
     return { status: 503, data: { ok: false, error: 'Code execution API is unavailable.' } };
   }
   if (!admission.admitted) {
@@ -183,8 +182,8 @@ export async function handleExecuteCode(
   } finally {
     try {
       await (dependencies.release || releaseCodeExecution)(userId, admission.leaseId, env);
-    } catch {
-      console.error('[code:execute] execution admission lease cleanup failed.');
+    } catch (error) {
+      console.error('[code:execute] execution admission lease cleanup failed.', getSafeAdmissionDiagnostic(error));
     }
   }
 }
