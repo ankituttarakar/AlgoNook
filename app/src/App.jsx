@@ -10,6 +10,7 @@ import { useUser, useAuth } from '@clerk/react';
 import { GameProvider, useGame } from './game/GameContext.jsx';
 import { syncClerkUser } from './lib/db.ts';
 import Hud from './components/Hud.jsx';
+import AlgoNookGuide from './components/AlgoNookGuide.jsx';
 import { PageScene } from './components/PageScene.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import LandingScreen from './screens/LandingScreen.jsx';
@@ -322,6 +323,7 @@ function AuthenticatedAppShell() {
           location={hudLocation}
           onNavigate={handleHudNavigate}
         />
+        <AlgoNookGuide onNavigate={navigate} />
 
         <PageScene key={sceneKey} scene={scene} world={selectedNodeId}>
 
