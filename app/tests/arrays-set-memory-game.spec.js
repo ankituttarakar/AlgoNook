@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.use({ storageState: 'auth.json', video: 'on', trace: 'on', screenshot: 'on' });
+test.use({ video: 'on', screenshot: 'on' });
 test.setTimeout(60_000);
 
 test('Arrays Set Memory Sprint records a correct duplicate trace and can replay', async ({ page }) => {
@@ -10,7 +10,7 @@ test('Arrays Set Memory Sprint records a correct duplicate trace and can replay'
   page.on('pageerror', (error) => pageErrors.push(error.message));
   page.on('requestfailed', (request) => failedRequests.push(`${request.method()} ${request.url()}: ${request.failure()?.errorText}`));
 
-  await page.goto('http://localhost:3000');
+  await page.goto('/');
   await expect(page.getByText(/DSA Roadmap|Learning Roadmap/i).first()).toBeVisible({ timeout: 30000 });
   await page.getByRole('button', { name: /Arrays/i }).first().click();
   await page.getByRole('button', { name: /Play Set Memory Sprint/i }).click();

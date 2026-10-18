@@ -13,7 +13,7 @@ test('AlgoNook full browser smoke test', async ({ page }) => {
     errors.push(`PAGE ERROR: ${error.message}`);
   });
 
-  await page.goto('http://localhost:3000', {
+  await page.goto('/', {
     waitUntil: 'networkidle',
   });
 

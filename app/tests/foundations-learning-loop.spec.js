@@ -3,7 +3,7 @@ import { CONCEPT_MAP } from '../src/data/concepts.js';
 import { GAME_LAB_BY_NODE } from '../src/data/games/index.js';
 import { getPracticeForNode } from '../src/data/practice.js';
 
-test.use({ storageState: 'auth.json', video: 'on', trace: 'on', screenshot: 'on' });
+test.use({ video: 'on', screenshot: 'on' });
 test.setTimeout(120_000);
 
 test('Foundations completes concept, interactive visualization, complexity theory, reasoning, and practice', async ({ page }) => {
@@ -15,7 +15,7 @@ test('Foundations completes concept, interactive visualization, complexity theor
   page.on('pageerror', (error) => pageErrors.push(error.message));
   page.on('requestfailed', (request) => failedRequests.push(`${request.method()} ${request.url()}: ${request.failure()?.errorText}`));
 
-  await page.goto('http://localhost:3000');
+  await page.goto('/');
   await expect(page.getByText(/DSA Roadmap|Learning Roadmap/i).first()).toBeVisible({ timeout: 30000 });
   await page.getByRole('button', { name: /Foundations/i }).first().click();
   await page.getByRole('button', { name: /Start Learning/i }).click();

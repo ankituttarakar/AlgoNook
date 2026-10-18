@@ -4,7 +4,7 @@ import { GAME_LAB_BY_NODE } from '../src/data/games/index.js';
 import { getPracticeForNode } from '../src/data/practice.js';
 import { MISSION_MAP } from '../src/data/missions/index.js';
 
-test.use({ storageState: 'auth.json', video: 'on', trace: 'on', screenshot: 'on' });
+test.use({ video: 'on', screenshot: 'on' });
 test.setTimeout(120_000);
 
 test('Hashing learning path reaches coding mission, explanation, transfer, and mastery review', async ({ page }) => {
@@ -16,7 +16,7 @@ test('Hashing learning path reaches coding mission, explanation, transfer, and m
   page.on('pageerror', (error) => pageErrors.push(error.message));
   page.on('requestfailed', (request) => failedRequests.push(`${request.method()} ${request.url()}: ${request.failure()?.errorText}`));
 
-  await page.goto('http://localhost:3000');
+  await page.goto('/');
   await expect(page.getByText(/DSA Roadmap|Learning Roadmap/i).first()).toBeVisible({ timeout: 30000 });
   await page.getByRole('button', { name: /Hashing/i }).first().click();
   await page.getByRole('button', { name: /Start Learning/i }).click();

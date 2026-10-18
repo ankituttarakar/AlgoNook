@@ -301,7 +301,7 @@ body::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-even
 }
 .world-card:focus-visible { outline: 2px solid rgb(var(--environment-accent)); outline-offset: 4px; }
 .bb-btn:focus-visible, .primary-nav-item:focus-visible, .sound-button:focus-visible { box-shadow: var(--bb-focus-ring); }
-.bb-btn-amber:hover:not(:disabled) { border-color: var(--bb-amber); background: rgba(255,181,139,.13); transform: translateY(-1px); }
+.bb-btn-amber:hover:not(:disabled) { border-color: var(--bb-amber); background: rgba(255,181,139,.13); }
 .bb-btn:disabled { box-shadow: none; }
 
 .home-hub-hero, .guidebook-hero, .chapter-hero, .roadmap-command-center {

@@ -1,10 +1,8 @@
 import { test } from "@playwright/test";
 
 test.use({
-  storageState: "auth.json",
   video: "on",
   screenshot: "on",
-  trace: "on",
 });
 
 test("AlgoNook full UI test", async ({ page }) => {
@@ -27,7 +25,7 @@ test("AlgoNook full UI test", async ({ page }) => {
     );
   });
 
-  await page.goto("http://localhost:3000");
+  await page.goto("/");
   await page.waitForTimeout(3000);
 
   await page.screenshot({

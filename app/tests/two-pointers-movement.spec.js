@@ -4,11 +4,11 @@ import { GAME_LAB_BY_NODE } from '../src/data/games/index.js';
 import { getPracticeForNode } from '../src/data/practice.js';
 import { MISSION_MAP } from '../src/data/missions/index.js';
 
-test.use({ storageState: 'auth.json', video: 'on', trace: 'on', screenshot: 'on' });
+test.use({ video: 'on', screenshot: 'on' });
 test.setTimeout(120_000);
 
 test('pointer movement game rejects unsafe moves, finds pair, and retries', async ({ page }) => {
-  await page.goto('http://localhost:3000');
+  await page.goto('/');
   await expect(page.getByText('Learning Roadmap', { exact: true })).toBeVisible({ timeout: 30000 });
   await page.getByText('Two Pointers', { exact: true }).first().click();
   await expect(page.locator('h1').filter({ hasText: 'Two Pointers' })).toBeVisible();
@@ -36,7 +36,7 @@ test('Two Pointers learning route reaches coding, explanation, transfer, and rev
   page.on('pageerror', (error) => pageErrors.push(error.message));
   page.on('requestfailed', (request) => failedRequests.push(`${request.method()} ${request.url()}: ${request.failure()?.errorText}`));
   page.setDefaultTimeout(10000);
-  await page.goto('http://localhost:3000');
+  await page.goto('/');
   await expect(page.getByText('Learning Roadmap', { exact: true })).toBeVisible({ timeout: 30000 });
   await page.getByText('Two Pointers', { exact: true }).first().click();
   await page.getByRole('button', { name: /Start Learning/ }).click();

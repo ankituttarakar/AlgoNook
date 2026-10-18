@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test.use({ storageState: 'auth.json', video: 'on', trace: 'on', screenshot: 'on' });
+test.use({ video: 'on', screenshot: 'on' });
 test.setTimeout(240_000);
 
 test('Section 2 authenticated API diagnostic', async ({ page, request }) => {
@@ -44,7 +44,7 @@ test('Section 2 authenticated API diagnostic', async ({ page, request }) => {
     }
   });
 
-  await page.goto('http://localhost:3000', { waitUntil: 'domcontentloaded', timeout: 30_000 });
+  await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30_000 });
   await page.waitForTimeout(8_000);
   browserTimes.nodeAtCapture = Date.now();
   browserTimes.browserAtCapture = await page.evaluate(() => Date.now());
@@ -85,12 +85,12 @@ test('Section 2 authenticated API diagnostic', async ({ page, request }) => {
     waitSeconds = Math.ceil(waitMs / 1000);
     if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
     const headers = { Authorization: `Bearer ${token}` };
-    const getProgress = await request.get('http://localhost:3000/api/progress', { headers });
+    const getProgress = await request.get('/api/progress', { headers });
     const progressBody = await getProgress.json().catch(() => ({}));
     apiResults.push({ endpoint: 'progress GET', status: getProgress.status(), body: progressBody });
 
     if (getProgress.ok() && progressBody.progress) {
-      const saveProgress = await request.post('http://localhost:3000/api/progress', {
+      const saveProgress = await request.post('/api/progress', {
         headers: { ...headers, 'Content-Type': 'application/json' },
         data: { xp: progressBody.progress.xp, level: progressBody.progress.level },
       });
@@ -98,7 +98,7 @@ test('Section 2 authenticated API diagnostic', async ({ page, request }) => {
     }
 
     if (tokenDetails?.user || syncPayload) {
-      const sync = await request.post('http://localhost:3000/api/sync-user', {
+      const sync = await request.post('/api/sync-user', {
         headers: { ...headers, 'Content-Type': 'application/json' },
         data: tokenDetails?.user || syncPayload,
       });
@@ -106,7 +106,7 @@ test('Section 2 authenticated API diagnostic', async ({ page, request }) => {
       apiResults.push({ endpoint: 'sync-user POST', status: sync.status(), ok: syncBody.ok });
     }
 
-    const execute = await request.post('http://localhost:3000/api/code/execute', {
+    const execute = await request.post('/api/code/execute', {
       headers: { ...headers, 'Content-Type': 'application/json' },
       data: {
         problemId: 'contains-duplicate',
