@@ -64,7 +64,7 @@ function MissionRow({ mission, isCleared, isOpen, onStart }) {
   );
 }
 
-export default function TopicScreen({ nodeId, onBack, onStartMission, onContinueChapter, onReview, onGuidebook }) {
+export default function TopicScreen({ nodeId, onBack, onStartMission, onContinueChapter, onReview, onGuidebook, onLearnVideos, onWatchShorts }) {
   const { cleared, skills, topics } = useGame();
   const node = ROADMAP_NODE_MAP[nodeId];
 
@@ -279,9 +279,19 @@ export default function TopicScreen({ nodeId, onBack, onStartMission, onContinue
         </section>
       )}
 
-      {/* Back to roadmap */}
-      <div className="flex gap-2 mt-4">
+      {/* Back to roadmap and quick links */}
+      <div className="flex flex-wrap gap-2 mt-4">
         <button onClick={() => onGuidebook?.()} className="bb-btn bb-btn-ghost text-xs">Open {node.label} notes →</button>
+        {onLearnVideos && (
+          <button onClick={() => { sfx.select(); onLearnVideos(); }} className="bb-btn bb-btn-ghost text-xs text-[var(--bb-cyan)]">
+            Watch {node.label} Videos 🎬 →
+          </button>
+        )}
+        {onWatchShorts && (
+          <button onClick={() => { sfx.select(); onWatchShorts(); }} className="bb-btn bb-btn-ghost text-xs text-[var(--bb-amber)]">
+            Watch {node.label} Shorts ⚡ →
+          </button>
+        )}
         <button onClick={() => { sfx.select(); onBack(); }} className="bb-btn bb-btn-ghost text-xs">
           ← Back to Roadmap
         </button>

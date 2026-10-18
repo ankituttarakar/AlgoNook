@@ -4,7 +4,9 @@ import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/react';
 
 const NAV_ITEMS = [
   { id: 'home', label: 'Home', icon: '⌂' },
-  { id: 'roadmap', label: 'Learn', icon: '◎' },
+  { id: 'roadmap', label: 'Roadmap', icon: '◎' },
+  { id: 'learn', label: 'Learn', icon: '▷' },
+  { id: 'shorts', label: 'Shorts', icon: '⚡' },
   { id: 'guidebook', label: 'Notes', icon: '≡' },
   { id: 'challenges', label: 'Challenges', icon: '✳' },
   { id: 'practice', label: 'Practice', icon: '⌘' },
@@ -16,7 +18,7 @@ const NAV_ITEMS = [
 export default function Hud({ location, onNavigate }) {
   const { save, level, levelInfo, toggleSound } = useGame();
   const pct = Math.min(100, Math.round((levelInfo.into / levelInfo.span) * 100));
-  const active = location === 'Review & Mastery' ? 'review' : ['Practice', 'Adaptive Training Room', 'Choose a Practice Chapter'].includes(location) ? 'practice' : location === 'Competition Arena' ? 'leaderboard' : location === 'Battlefield Arena' ? 'arena' : location === 'Challenge Area' ? 'challenges' : location === 'Learning Roadmap' ? 'roadmap' : location === 'Player Headquarters' ? 'home' : location === 'DSA Guidebook' ? 'guidebook' : ['Arrays Game Lab', 'Set Memory Sprint', 'Frequency Map Builder', 'Pointer Movement Game', 'Mission Brief', 'Results'].includes(location) || location?.endsWith('Reasoning Lab') ? 'challenges' : 'roadmap';
+  const active = location === 'Review & Mastery' ? 'review' : ['Practice', 'Adaptive Training Room', 'Choose a Practice Chapter'].includes(location) ? 'practice' : location === 'Competition Arena' ? 'leaderboard' : location === 'Battlefield Arena' ? 'arena' : location === 'Challenge Area' ? 'challenges' : location === 'AlgoNook Shorts' ? 'shorts' : location === 'Learn Feed' ? 'learn' : location === 'Learning Roadmap' ? 'roadmap' : location === 'Player Headquarters' ? 'home' : location === 'DSA Guidebook' ? 'guidebook' : ['Arrays Game Lab', 'Set Memory Sprint', 'Frequency Map Builder', 'Pointer Movement Game', 'Mission Brief', 'Results'].includes(location) || location?.endsWith('Reasoning Lab') ? 'challenges' : 'roadmap';
 
   return (
     <header className="app-header">

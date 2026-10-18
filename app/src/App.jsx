@@ -17,6 +17,8 @@ import BootScreen from './screens/BootScreen.jsx';
 import RoadmapScreen from './screens/RoadmapScreen.jsx';
 import HomeScreen from './screens/HomeScreen.jsx';
 import GuidebookScreen from './screens/GuidebookScreen.jsx';
+import LearnScreen from './screens/LearnScreen.jsx';
+import ShortsScreen from './screens/ShortsScreen.jsx';
 import TopicScreen from './screens/TopicScreen.jsx';
 import ConceptScreen from './screens/ConceptScreen.jsx';
 import VisualizationScreen from './screens/VisualizationScreen.jsx';
@@ -47,6 +49,8 @@ import { getPracticeRecommendations } from './game/recommendations.js';
 const LOCATION_LABELS = {
   home:          'Player Headquarters',
   guidebook:     'DSA Guidebook',
+  learn:         'Learn Feed',
+  shorts:        'AlgoNook Shorts',
   roadmap:       'Learning Roadmap',
   topic:         'Topic',
   concept:       'Concept',
@@ -159,14 +163,16 @@ function resolveLocation(pathname, search) {
     return { screen: parts[2] === 'run' ? 'run' : 'brief', mission, nodeId: mission?.chapter || mission?.topic || null };
   }
   const topic = new URLSearchParams(search).get('topic');
-  const screen = ({ '': 'home', roadmap: 'roadmap', guidebook: 'guidebook', review: 'review', profile: 'profile', arena: 'arena', leaderboard: 'leaderboard', practice: topic ? 'practice' : 'practice-hub', challenges: 'challenges', patterns: 'pattern', results: 'debrief' })[parts[0] || ''] || 'home';
-  return { screen, nodeId: topic || (['practice', 'pattern'].includes(screen) ? 'foundations' : null), mission: null, result: null };
+  const screen = ({ '': 'home', roadmap: 'roadmap', learn: 'learn', shorts: 'shorts', guidebook: 'guidebook', review: 'review', profile: 'profile', arena: 'arena', leaderboard: 'leaderboard', practice: topic ? 'practice' : 'practice-hub', challenges: 'challenges', patterns: 'pattern', results: 'debrief' })[parts[0] || ''] || 'home';
+  return { screen, nodeId: topic || (screen === 'learn' ? 'arrays' : screen === 'shorts' ? 'all' : ['practice', 'pattern'].includes(screen) ? 'foundations' : null), mission: null, result: null };
 }
 
 function pathForLocation(target, extra = {}, currentNodeId = null, currentMission = null) {
   const nodeId = extra.nodeId || currentNodeId || 'foundations';
   if (target === 'home') return '/';
   if (target === 'guidebook' && (extra.nodeId || currentNodeId)) return `/guidebook?topic=${encodeURIComponent(nodeId)}`;
+  if (target === 'learn') return extra.nodeId ? `/learn?topic=${encodeURIComponent(extra.nodeId)}` : '/learn';
+  if (target === 'shorts') return extra.nodeId && extra.nodeId !== 'all' ? `/shorts?topic=${encodeURIComponent(extra.nodeId)}` : '/shorts';
   if (target === 'practice-choose') return '/practice/choose';
   if (target === 'roadmap' || target === 'guidebook' || target === 'review' || target === 'profile' || target === 'arena' || target === 'leaderboard' || target === 'challenges' || target === 'practice-hub') return `/${target === 'practice-hub' ? 'practice' : target}`;
   if (target === 'topic') return `/topic/${encodeURIComponent(nodeId)}`;
@@ -231,7 +237,8 @@ function AuthenticatedAppShell() {
   };
   const handleHudNavigate = (target) => {
     if (target === 'home' || target === 'roadmap' || target === 'guidebook') return navigate(target);
-    if (target === 'learn') return selectedNodeId ? navigate('topic', { nodeId: selectedNodeId }) : navigate('roadmap');
+    if (target === 'learn') return navigate('learn', { nodeId: selectedNodeId || 'arrays' });
+    if (target === 'shorts') return navigate('shorts', { nodeId: selectedNodeId || 'all' });
     if (target === 'review') return navigate('review');
     if (target === 'profile' || target === 'arena' || target === 'leaderboard' || target === 'challenges') return navigate(target);
     if (target === 'practice') return navigate('practice-hub');
@@ -268,7 +275,7 @@ function AuthenticatedAppShell() {
       ? `${ROADMAP_NODES.find((node) => node.id === selectedNodeId)?.label || 'DSA'} Reasoning Lab`
     : LOCATION_LABELS[screen] || '';
   const scene = screen === 'home' ? 'home-hub'
-    : screen === 'guidebook' ? 'learning-library'
+    : screen === 'guidebook' || screen === 'learn' ? 'learning-library'
       : screen === 'roadmap' ? 'world-map'
     : screen === 'topic' ? 'topic-island'
       : ['concept', 'visualize', 'pattern', 'complexity'].includes(screen) ? 'learning-room'
@@ -335,6 +342,31 @@ function AuthenticatedAppShell() {
         {screen === 'practice-hub' && <PracticeHubScreen recommendations={recommendations} onLaunch={launchRecommendation} onChooseChapter={() => navigate('practice-choose')} />}
         {screen === 'practice-choose' && <PracticeChapterPickerScreen onPractice={(node) => navigate('practice', { nodeId: node.id })} onLearn={(node) => navigate('topic', { nodeId: node.id })} onBack={() => navigate('practice-hub')} />}
 
+        {/* ── LEARN FEED ── */}
+        {screen === 'learn' && (
+          <LearnScreen
+            initialTopicId={selectedNodeId || 'arrays'}
+            onPracticeTopic={(topicId) => {
+              const node = ROADMAP_NODES.find((n) => n.topicId === topicId || n.id === topicId) || ROADMAP_NODES.find((n) => n.id === 'arrays');
+              navigate('practice', { nodeId: node?.id || 'arrays' });
+            }}
+            onBackToRoadmap={() => navigate('roadmap')}
+          />
+        )}
+
+        {/* ── SHORTS (INFINITE DSA FEED) ── */}
+        {screen === 'shorts' && (
+          <ShortsScreen
+            initialTopic={selectedNodeId || 'all'}
+            onPracticeTopic={(topicId) => {
+              const node = ROADMAP_NODES.find((n) => n.topicId === topicId || n.id === topicId) || ROADMAP_NODES.find((n) => n.id === 'arrays');
+              navigate('practice', { nodeId: node?.id || 'arrays' });
+            }}
+            onBackToLearn={() => navigate('learn', { nodeId: selectedNodeId && selectedNodeId !== 'all' ? selectedNodeId : 'arrays' })}
+            onBackToRoadmap={() => navigate('roadmap')}
+          />
+        )}
+
         {/* ── ROADMAP ── */}
         {screen === 'roadmap' && (
           <RoadmapScreen
@@ -352,6 +384,8 @@ function AuthenticatedAppShell() {
             onContinueChapter={continueChapter}
             onReview={() => navigate('review')}
             onGuidebook={() => navigate('guidebook', { nodeId: selectedNodeId })}
+            onLearnVideos={() => navigate('learn', { nodeId: selectedNodeId })}
+            onWatchShorts={() => navigate('shorts', { nodeId: selectedNodeId })}
           />
         )}
 
