@@ -4,6 +4,7 @@ import { isSkillReviewDue } from '../game/mastery.js';
 import { ROADMAP_NODES } from '../data/roadmap.js';
 import { MISSION_MAP, missionsOfTopic } from '../data/missions/index.js';
 import PracticeRecommendations from '../components/PracticeRecommendations.jsx';
+import AlgorithmField from '../components/AlgorithmField.jsx';
 
 export default function HomeScreen({ onRoadmap, onPractice, onReview, onGuidebook, onContinueNode, recommendations = [], onLaunchRecommendation }) {
   const { save, cleared, skills, topics, level, levelInfo, title } = useGame();
@@ -30,8 +31,9 @@ export default function HomeScreen({ onRoadmap, onPractice, onReview, onGuideboo
   const xpPercent = Math.min(100, Math.round((levelInfo.into / levelInfo.span) * 100));
 
   return <main className="home-hub-shell">
-    <section className="home-hub-hero floating-panel">
-      <div><p className="eyebrow">PLAYER HEADQUARTERS / LEVEL {String(level).padStart(2, '0')}</p><h1>Welcome back,<br /><em>{save.callsign || 'learner'}.</em></h1><p>Your next step is ready in the algorithm world. Learn one idea, prove it with a trace, then carry it into a problem.</p>
+    <section className="home-hub-hero floating-panel home-hub-hero-cinematic">
+      <div className="home-hub-hero-art" aria-hidden="true"><AlgorithmField subtle /></div>
+      <div className="home-hub-hero-copy"><p className="eyebrow">PLAYER HEADQUARTERS / LEVEL {String(level).padStart(2, '0')}</p><h1>Welcome back,<br /><em>{save.callsign || 'learner'}.</em></h1><p>Your next step is ready in the algorithm world. Learn one idea, prove it with a trace, then carry it into a problem.</p>
         <div className="home-hub-actions"><button className="bb-btn bb-btn-green" onClick={() => journeyComplete ? onRoadmap() : onContinueNode(currentNode, currentStage)}>{journeyComplete ? 'View completed roadmap' : `Continue ${currentNode.label}`} →</button><button className="bb-btn bb-btn-ghost" onClick={onRoadmap}>View roadmap</button></div>
       </div>
       <div className="home-level-panel"><span className="home-level-orb">{String(level).padStart(2, '0')}</span><small>{title}</small><strong>{save.xp || 0} XP</strong><i><b style={{ width: `${xpPercent}%` }} /></i><small>{levelInfo.into} / {levelInfo.span} XP to next level</small></div>

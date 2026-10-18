@@ -3,7 +3,9 @@
 // Auth: Clerk SignIn / SignUp modals.
 
 import { SignInButton, SignUpButton } from '@clerk/react';
+import { Link } from 'react-router';
 import { sfx } from '../game/sfx.js';
+import AlgorithmField from '../components/AlgorithmField.jsx';
 
 const FEATURES = [
   {
@@ -58,114 +60,74 @@ const COLOR_CLASSES = {
 
 export default function LandingScreen() {
   return (
-    <div className="min-h-dvh">
-      {/* Nav bar */}
-      <nav className="sticky top-0 z-40 border-b border-[var(--bb-line)] bg-[rgba(6,8,7,0.93)] backdrop-blur-sm">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-lg font-bold text-[var(--bb-green)]" style={{ textShadow: '0 0 8px rgba(0,244,142,0.4)' }}>
-              AlgoNook
-            </span>
-            <span className="hidden text-[10px] uppercase tracking-widest text-[var(--bb-muted)] sm:inline">
-              / DSA Learning Platform
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <SignInButton mode="modal">
-              <button
-                onClick={() => sfx.select()}
-                className="bb-btn bb-btn-ghost !min-h-0 !px-3 !py-1.5 text-xs"
-              >
-                Sign in
-              </button>
-            </SignInButton>
-            <SignUpButton mode="modal">
-              <button
-                onClick={() => sfx.select()}
-                className="bb-btn bb-btn-green !min-h-0 !px-3 !py-1.5 text-xs"
-              >
-                Get started
-              </button>
-            </SignUpButton>
+    <div className="landing-page">
+      <nav className="landing-nav" aria-label="Public navigation">
+        <div className="landing-nav-inner">
+          <Link to="/" className="landing-brand" aria-label="AlgoNook home">
+            <span className="brand-symbol" aria-hidden="true">a<span>n</span></span>
+            <span className="landing-brand-copy">AlgoNook<small>LEARN BY DOING</small></span>
+          </Link>
+          <div className="landing-nav-actions">
+            <SignInButton mode="modal"><button onClick={() => sfx.select()} className="landing-signin">Sign in</button></SignInButton>
+            <SignUpButton mode="modal"><button onClick={() => sfx.select()} className="bb-btn bb-btn-green landing-nav-join">Get started <span aria-hidden="true">↗</span></button></SignUpButton>
           </div>
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="mx-auto max-w-4xl px-4 pt-20 pb-16 text-center">
-        <div className="mb-6 inline-block border border-[var(--bb-green-dim)]/50 bg-[rgba(0,244,142,0.04)] px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[var(--bb-green)]">
-          DSA · Algorithms · Interview Preparation
-        </div>
-
-        <h1 className="text-4xl font-bold leading-tight text-[var(--bb-text)] sm:text-5xl lg:text-6xl">
-          Learn DSA the way your{' '}
-          <span className="text-[var(--bb-green)]" style={{ textShadow: '0 0 20px rgba(0,244,142,0.3)' }}>
-            brain actually remembers
-          </span>
-        </h1>
-
-        <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-[var(--bb-muted)] sm:text-lg">
-          AlgoNook teaches algorithms through interactive visualizations, structured learning paths,
-          and guided problem-solving — not memorization. Built for placement prep, LeetCode, and technical interviews.
-        </p>
-
-        <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          <SignUpButton mode="modal">
-            <button
-              onClick={() => sfx.select()}
-              className="bb-btn bb-btn-green w-full sm:w-auto sm:min-w-[200px] text-sm"
-            >
-              Start Learning Free →
-            </button>
-          </SignUpButton>
-          <SignInButton mode="modal">
-            <button
-              onClick={() => sfx.select()}
-              className="bb-btn bb-btn-ghost w-full sm:w-auto sm:min-w-[140px] text-sm"
-            >
-              Sign in
-            </button>
-          </SignInButton>
-        </div>
-
-        {/* Topics preview */}
-        <div className="mt-12 flex flex-wrap justify-center gap-2">
-          {TOPICS_PREVIEW.map((t, i) => (
-            <span
-              key={t}
-              className="border border-[var(--bb-line)] px-2.5 py-1 text-[11px] text-[var(--bb-muted)] transition-colors hover:border-[var(--bb-green-dim)] hover:text-[var(--bb-text)]"
-              style={{ animationDelay: `${i * 30}ms` }}
-            >
-              {t}
-            </span>
-          ))}
-        </div>
-      </section>
+      <main>
+        <section className="landing-hero" aria-labelledby="landing-title">
+          <div className="landing-hero-glow" aria-hidden="true" />
+          <div className="landing-hero-inner">
+            <div className="landing-hero-copy">
+              <p className="landing-eyebrow"><span aria-hidden="true" /> ALGONOOK / LEARN BY DOING</p>
+              <h1 id="landing-title">Master DSA.<br /><span>One mission at a time.</span></h1>
+              <p className="landing-lede">Turn data structures and algorithms into hands-on missions, visual learning, and coding challenges.</p>
+              <div className="landing-actions">
+                <SignUpButton mode="modal">
+                  <button onClick={() => sfx.select()} className="bb-btn bb-btn-green landing-primary-action">Start learning <span aria-hidden="true">→</span></button>
+                </SignUpButton>
+                <Link to="/roadmap" className="bb-btn bb-btn-ghost landing-roadmap-action" aria-label="Explore the AlgoNook roadmap">
+                  Explore the roadmap <span aria-hidden="true">↗</span>
+                </Link>
+              </div>
+              <p className="landing-route-note">Your roadmap opens after sign-in and onboarding.</p>
+              <ul className="landing-benefits" aria-label="How AlgoNook helps you learn">
+                <li><span aria-hidden="true">◇</span> Learn by doing</li>
+                <li><span aria-hidden="true">⌁</span> Visualize concepts</li>
+                <li><span aria-hidden="true">↗</span> Track your progress</li>
+              </ul>
+            </div>
+            <div className="landing-art-wrap"><AlgorithmField /></div>
+            <div className="landing-art-caption" aria-hidden="true"><span>LEARNING PATH</span><b>01 — EXPLORE</b></div>
+          </div>
+          <div className="landing-hero-foot" aria-hidden="true"><span>CONCEPT</span><i /><span>TRACE</span><i /><span>PROVE</span></div>
+        </section>
 
       {/* Features grid */}
-      <section className="mx-auto max-w-5xl px-4 pb-20">
-        <div className="mb-10 text-center">
-          <h2 className="text-xl font-bold text-[var(--bb-text)]">
+      <section className="landing-section landing-features" aria-labelledby="landing-features-title">
+        <div className="landing-section-heading">
+          <p className="eyebrow">A SYSTEM FOR UNDERSTANDING</p>
+          <h2 id="landing-features-title">
             Everything you need to prepare
           </h2>
-          <p className="mt-2 text-sm text-[var(--bb-muted)]">
+          <p>
             A complete learning system from first principles to interview-ready fluency.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="landing-feature-grid">
           {FEATURES.map((feat) => {
             const cc = COLOR_CLASSES[feat.color] || COLOR_CLASSES.green;
             return (
               <div
                 key={feat.title}
-                className={`border ${cc.border} bg-[var(--bb-panel)] p-5 transition-all hover:border-opacity-80`}
+                className={`landing-feature-card ${cc.border}`}
               >
                 <div className={`mb-3 font-mono text-2xl leading-none ${cc.icon}`}>
                   {feat.icon}
                 </div>
-                <h3 className="mb-2 text-sm font-semibold text-[var(--bb-text)]">{feat.title}</h3>
-                <p className="text-xs leading-relaxed text-[var(--bb-muted)]">{feat.body}</p>
+                <h3>{feat.title}</h3>
+                <p>{feat.body}</p>
               </div>
             );
           })}
@@ -173,61 +135,57 @@ export default function LandingScreen() {
       </section>
 
       {/* Learning path preview */}
-      <section className="border-t border-[var(--bb-line)] bg-[var(--bb-panel)] py-16">
-        <div className="mx-auto max-w-4xl px-4">
-          <div className="text-center mb-10">
-            <h2 className="text-xl font-bold text-[var(--bb-text)]">A structured path, not a dumping ground</h2>
-            <p className="mt-2 text-sm text-[var(--bb-muted)]">
+      <section className="landing-roadmap-section" aria-labelledby="landing-roadmap-title">
+        <div className="landing-section landing-roadmap-inner">
+          <div className="landing-roadmap-copy">
+            <p className="eyebrow">FOLLOW THE SIGNAL</p>
+            <h2 id="landing-roadmap-title">A structured path, not a dumping ground</h2>
+            <p>
               Each topic unlocks prerequisites. You always know where you are and what to learn next.
             </p>
+            <Link to="/roadmap" className="landing-inline-link">Explore the roadmap <span aria-hidden="true">→</span></Link>
           </div>
 
           {/* Simplified path visualization */}
-          <div className="flex items-center justify-center">
-            <div className="space-y-0 w-full max-w-sm">
+          <div className="landing-roadmap-visual">
+            <ol className="landing-roadmap-list" aria-label="Roadmap topic sequence">
               {['Foundations', 'Arrays', 'Hashing + Two Pointers', 'Trees + Graphs', 'Dynamic Programming', 'Interview Patterns'].map((step, i, arr) => (
-                <div key={step}>
-                  <div className={`border px-4 py-3 text-center text-sm transition-colors ${
+                <li key={step} className={`landing-roadmap-step landing-roadmap-step-${i}`}>
+                  <div className={
                     i === 0 ? 'border-cyan-700 text-cyan-400 bg-cyan-950/20' :
                     i === arr.length - 1 ? 'border-[var(--bb-amber)] text-[var(--bb-amber)] bg-[rgba(255,176,0,0.06)]' :
                     'border-[var(--bb-line)] text-[var(--bb-text)]'
-                  }`}>
+                  }>
                     {step}
                   </div>
-                  {i < arr.length - 1 && (
-                    <div className="flex justify-center">
-                      <div className="w-px h-5 bg-[var(--bb-line)]" />
-                    </div>
-                  )}
-                </div>
+                </li>
               ))}
-            </div>
+            </ol>
           </div>
         </div>
       </section>
 
       {/* CTA footer */}
-      <section className="border-t border-[var(--bb-line)] py-16 text-center">
-        <div className="mx-auto max-w-xl px-4">
-          <h2 className="text-2xl font-bold text-[var(--bb-text)] mb-4">
+      <section className="landing-final-cta" aria-labelledby="landing-final-title">
+        <div>
+          <p className="eyebrow">YOUR NEXT IDEA IS WAITING</p>
+          <h2 id="landing-final-title">
             Ready to master DSA?
           </h2>
-          <p className="text-sm text-[var(--bb-muted)] mb-8">
+          <p>
             Free to start. Track your progress, earn XP, and advance through the roadmap at your own pace.
           </p>
           <SignUpButton mode="modal">
-            <button
-              onClick={() => sfx.select()}
-              className="bb-btn bb-btn-green text-sm min-w-[200px]"
-            >
-              Create free account →
+            <button onClick={() => sfx.select()} className="bb-btn bb-btn-green landing-final-button">
+              Create free account <span aria-hidden="true">→</span>
             </button>
           </SignUpButton>
-          <p className="mt-4 text-[10px] text-[var(--bb-muted)]">
-            {TOPICS_PREVIEW.length} topics · 200+ problems · spaced repetition · live code execution
+          <p className="landing-facts">
+            {TOPICS_PREVIEW.length} topics · structured learning · spaced repetition · live code execution
           </p>
         </div>
       </section>
+      </main>
     </div>
   );
 }
