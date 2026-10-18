@@ -1,7 +1,6 @@
 // Mission briefing — context, learning notes, objectives, start
 import Type from '../components/Type.jsx';
 import { TOPIC_MAP } from '../data/topics.js';
-import { useGame } from '../game/GameContext.jsx';
 import { sfx } from '../game/sfx.js';
 
 const DIFF_LABEL = { easy: 'EZ', med: 'MED', hard: 'HRD' };
@@ -11,10 +10,28 @@ const DIFF_COLOR = {
   hard: 'text-[var(--bb-red)]',
 };
 
-export default function BriefScreen({ mission, onDeploy, onBack }) {
-  const { cleared } = useGame();
+export default function BriefScreen({ mission, cleared = {}, onDeploy, onBack }) {
+  if (!mission || typeof mission !== 'object') {
+    throw new TypeError('BriefScreen requires a mission record.');
+  }
+  if (typeof mission.title !== 'string' || !mission.title.trim() || typeof mission.brief !== 'string') {
+    throw new Error(`BriefScreen mission "${mission.id || 'unknown'}" is missing required title or brief text.`);
+  }
   const topic = TOPIC_MAP[mission.topic];
+  if (!topic) {
+    throw new Error(`BriefScreen mission "${mission.id || 'unknown'}" references unknown topic "${mission.topic || 'missing'}".`);
+  }
+  if (mission.challenges != null && !Array.isArray(mission.challenges)) {
+    throw new Error(`BriefScreen mission "${mission.id}" has invalid challenge metadata; expected an array.`);
+  }
   const replay = !!cleared[mission.id];
+  const intelNotes = Array.isArray(mission.intel)
+    ? mission.intel.filter((line) => typeof line === 'string' && line.trim())
+    : [];
+  const challenges = Array.isArray(mission.challenges) ? mission.challenges : [];
+  if (challenges.some((challenge) => !challenge || typeof challenge !== 'object' || !DIFF_LABEL[challenge.d])) {
+    throw new Error(`BriefScreen mission "${mission.id}" has invalid challenge difficulty metadata.`);
+  }
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-24 pt-8">
@@ -45,14 +62,18 @@ export default function BriefScreen({ mission, onDeploy, onBack }) {
           <div className="mb-2 text-[10px] uppercase tracking-widest text-[var(--bb-amber)]">
             {mission.problemFlow ? 'PROBLEM NOTES' : '▚ Intel decrypt'}
           </div>
-          <ul className="space-y-1.5 text-xs leading-relaxed text-[var(--bb-muted)]">
-            {mission.intel.map((line, i) => (
-              <li key={i} className="flex gap-2">
-                <span className="text-[var(--bb-green-dim)]">▸</span>
-                <span>{line}</span>
-              </li>
-            ))}
-          </ul>
+          {intelNotes.length > 0 ? (
+            <ul className="space-y-1.5 text-xs leading-relaxed text-[var(--bb-muted)]">
+              {intelNotes.map((line, i) => (
+                <li key={i} className="flex gap-2">
+                  <span className="text-[var(--bb-green-dim)]">▸</span>
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs leading-relaxed text-[var(--bb-muted)]">No intel notes are available for this mission.</p>
+          )}
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-[var(--bb-line)] pt-4 text-xs">
@@ -66,7 +87,7 @@ export default function BriefScreen({ mission, onDeploy, onBack }) {
               FULL LEARNING LOOP · 7 ACTIVE STAGES
             </span>
           ) : (
-            (mission.challenges || []).map((c, i) => (
+            challenges.map((c, i) => (
               <span key={i} className={`border border-[var(--bb-line)] px-2 py-1 ${DIFF_COLOR[c.d]}`}>
                 {i + 1}·{DIFF_LABEL[c.d]}
               </span>

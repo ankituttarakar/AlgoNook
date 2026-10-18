@@ -67,7 +67,8 @@ function validHintLevels(value: unknown): value is number[] {
 }
 
 function nodeRequirementsForMission(missionId: string) {
-  const node = ROADMAP_NODES.find((item) => {
+  const mission = MISSION_MAP[missionId];
+  const node = (mission?.roadmapNodeId ? ROADMAP_NODE_MAP[mission.roadmapNodeId] : null) || ROADMAP_NODES.find((item) => {
     const topics = item.missionTopics || (item.topicId ? [item.topicId] : []);
     return topics.flatMap(missionsOfTopic).some((mission) => mission.id === missionId);
   });

@@ -9,6 +9,7 @@ import { useLocation, useNavigate as useRouterNavigate } from 'react-router';
 import { useUser, useAuth } from '@clerk/react';
 import { GameProvider, useGame } from './game/GameContext.jsx';
 import { syncClerkUser } from './lib/db.ts';
+import { appendWorkflowOrigin, CHALLENGES_ORIGIN, createNavigationRequest, getChallengeWorkflowHeader, getMissionReturnTarget, getNavigationOrigin } from './lib/navigationOrigin.mjs';
 import Hud from './components/Hud.jsx';
 import AlgoNookGuide from './components/AlgoNookGuide.jsx';
 import { PageScene } from './components/PageScene.jsx';
@@ -74,6 +75,43 @@ const LOCATION_LABELS = {
   run:           'Practice',
   debrief:       'Results',
 };
+
+function resolveLocation(pathname, search) {
+  const parts = pathname.split('/').filter(Boolean);
+  if (parts[0] === 'practice' && parts[1] === 'choose') return { screen: 'practice-choose', nodeId: null, mission: null };
+  if (parts[0] === 'topic' && parts[1]) {
+    const page = parts[2] || 'topic';
+    const screenByPage = { concept: 'concept', visualize: 'visualize', complexity: 'complexity', pattern: 'pattern', practice: 'practice', game: 'game' };
+    return { screen: screenByPage[page] || 'topic', nodeId: decodeURIComponent(parts[1]) };
+  }
+  if (parts[0] === 'challenge' && parts[1]) {
+    const missionId = decodeURIComponent(parts[1]);
+    const mission = MISSION_MAP[missionId] || null;
+    return { screen: parts[2] === 'run' ? 'run' : 'brief', mission, nodeId: mission?.roadmapNodeId || mission?.chapter || mission?.topic || null, origin: getNavigationOrigin(search) };
+  }
+  const topic = new URLSearchParams(search).get('topic');
+  const screen = ({ '': 'home', roadmap: 'roadmap', learn: 'learn', shorts: 'shorts', guidebook: 'guidebook', review: 'review', profile: 'profile', arena: 'arena', leaderboard: 'leaderboard', practice: topic ? 'practice' : 'practice-hub', challenges: 'challenges', patterns: 'pattern', results: 'debrief' })[parts[0] || ''] || 'home';
+  return { screen, nodeId: topic || (screen === 'learn' ? 'arrays' : screen === 'shorts' ? 'all' : ['practice', 'pattern'].includes(screen) ? 'foundations' : null), mission: null, result: null, origin: screen === 'debrief' ? getNavigationOrigin(search) : null };
+}
+
+function pathForLocation(target, extra = {}, currentNodeId = null, currentMission = null) {
+  const nodeId = extra.nodeId || currentNodeId || 'foundations';
+  if (target === 'home') return '/';
+  if (target === 'guidebook' && (extra.nodeId || currentNodeId)) return `/guidebook?topic=${encodeURIComponent(nodeId)}`;
+  if (target === 'learn') return extra.nodeId ? `/learn?topic=${encodeURIComponent(extra.nodeId)}` : '/learn';
+  if (target === 'shorts') return extra.nodeId && extra.nodeId !== 'all' ? `/shorts?topic=${encodeURIComponent(extra.nodeId)}` : '/shorts';
+  if (target === 'practice-choose') return '/practice/choose';
+  if (target === 'roadmap' || target === 'guidebook' || target === 'review' || target === 'profile' || target === 'arena' || target === 'leaderboard' || target === 'challenges' || target === 'practice-hub') return `/${target === 'practice-hub' ? 'practice' : target}`;
+  if (target === 'topic') return `/topic/${encodeURIComponent(nodeId)}`;
+  if (['concept', 'visualize', 'complexity', 'pattern', 'practice', 'game'].includes(target)) return `/topic/${encodeURIComponent(nodeId)}/${target}`;
+  if (target === 'brief' || target === 'run') {
+    const mission = extra.mission || currentMission;
+    const path = mission ? `/challenge/${encodeURIComponent(mission.id)}/${target}` : `/topic/${encodeURIComponent(nodeId)}`;
+    return appendWorkflowOrigin(path, extra.origin);
+  }
+  if (target === 'debrief') return appendWorkflowOrigin('/results', extra.origin);
+  return `/${target}`;
+}
 
 function LoadingScreen({ label = 'Authenticating…' }) {
   return (
@@ -150,42 +188,6 @@ function CrashHook() {
   return null;
 }
 
-function resolveLocation(pathname, search) {
-  const parts = pathname.split('/').filter(Boolean);
-  if (parts[0] === 'practice' && parts[1] === 'choose') return { screen: 'practice-choose', nodeId: null, mission: null };
-  if (parts[0] === 'topic' && parts[1]) {
-    const page = parts[2] || 'topic';
-    const screenByPage = { concept: 'concept', visualize: 'visualize', complexity: 'complexity', pattern: 'pattern', practice: 'practice', game: 'game' };
-    return { screen: screenByPage[page] || 'topic', nodeId: decodeURIComponent(parts[1]) };
-  }
-  if (parts[0] === 'challenge' && parts[1]) {
-    const missionId = decodeURIComponent(parts[1]);
-    const mission = MISSION_MAP[missionId] || null;
-    return { screen: parts[2] === 'run' ? 'run' : 'brief', mission, nodeId: mission?.chapter || mission?.topic || null };
-  }
-  const topic = new URLSearchParams(search).get('topic');
-  const screen = ({ '': 'home', roadmap: 'roadmap', learn: 'learn', shorts: 'shorts', guidebook: 'guidebook', review: 'review', profile: 'profile', arena: 'arena', leaderboard: 'leaderboard', practice: topic ? 'practice' : 'practice-hub', challenges: 'challenges', patterns: 'pattern', results: 'debrief' })[parts[0] || ''] || 'home';
-  return { screen, nodeId: topic || (screen === 'learn' ? 'arrays' : screen === 'shorts' ? 'all' : ['practice', 'pattern'].includes(screen) ? 'foundations' : null), mission: null, result: null };
-}
-
-function pathForLocation(target, extra = {}, currentNodeId = null, currentMission = null) {
-  const nodeId = extra.nodeId || currentNodeId || 'foundations';
-  if (target === 'home') return '/';
-  if (target === 'guidebook' && (extra.nodeId || currentNodeId)) return `/guidebook?topic=${encodeURIComponent(nodeId)}`;
-  if (target === 'learn') return extra.nodeId ? `/learn?topic=${encodeURIComponent(extra.nodeId)}` : '/learn';
-  if (target === 'shorts') return extra.nodeId && extra.nodeId !== 'all' ? `/shorts?topic=${encodeURIComponent(extra.nodeId)}` : '/shorts';
-  if (target === 'practice-choose') return '/practice/choose';
-  if (target === 'roadmap' || target === 'guidebook' || target === 'review' || target === 'profile' || target === 'arena' || target === 'leaderboard' || target === 'challenges' || target === 'practice-hub') return `/${target === 'practice-hub' ? 'practice' : target}`;
-  if (target === 'topic') return `/topic/${encodeURIComponent(nodeId)}`;
-  if (['concept', 'visualize', 'complexity', 'pattern', 'practice', 'game'].includes(target)) return `/topic/${encodeURIComponent(nodeId)}/${target}`;
-  if (target === 'brief' || target === 'run') {
-    const mission = extra.mission || currentMission;
-    return mission ? `/challenge/${encodeURIComponent(mission.id)}/${target}` : `/topic/${encodeURIComponent(nodeId)}`;
-  }
-  if (target === 'debrief') return '/results';
-  return `/${target}`;
-}
-
 /**
  * AuthenticatedApp — all screens that require being signed in.
  *
@@ -218,8 +220,10 @@ function AuthenticatedAppShell() {
   const mission = route.mission || (route.screen === 'brief'
     ? MISSIONS.find((item) => !cleared[item.id] && isUnlocked(item.id, cleared)) || null
     : null);
-  const screen = route.screen === 'debrief' && !location.state?.result ? 'roadmap' : route.screen;
-  const selectedNodeId = route.nodeId || mission?.chapter || mission?.topic || null;
+  const screen = route.screen === 'debrief' && !location.state?.result
+    ? getMissionReturnTarget(route.origin, 'roadmap')
+    : route.screen;
+  const selectedNodeId = route.nodeId || mission?.roadmapNodeId || mission?.chapter || mission?.topic || null;
   const result = route.screen === 'debrief' ? location.state?.result || null : null;
   const [errorResetKey, setErrorResetKey] = useState(0);
   const recommendations = useMemo(() => getPracticeRecommendations(save), [save]);
@@ -259,8 +263,8 @@ function AuthenticatedAppShell() {
   }, [screen]);
 
   const navigate = (target, extra = {}) => {
-    const state = target === 'debrief' ? { result: extra.result } : undefined;
-    routerNavigate(pathForLocation(target, extra, selectedNodeId, mission), { state });
+    const request = createNavigationRequest(pathForLocation(target, extra, selectedNodeId, mission), target, extra);
+    routerNavigate(request.path, { state: request.state });
   };
   const launchRecommendation = (recommendation) => {
     const activity = recommendation.activity;
@@ -270,11 +274,12 @@ function AuthenticatedAppShell() {
     else navigate('topic', { nodeId: recommendation.nodeId });
   };
 
-  const hudLocation = screen === 'topic'
+  const challengeWorkflowHeader = getChallengeWorkflowHeader(route.origin, screen);
+  const hudLocation = challengeWorkflowHeader?.location || (screen === 'topic'
     ? ROADMAP_NODES.find((node) => node.id === selectedNodeId)?.label || 'Topic'
     : screen === 'game'
       ? `${ROADMAP_NODES.find((node) => node.id === selectedNodeId)?.label || 'DSA'} Reasoning Lab`
-    : LOCATION_LABELS[screen] || '';
+    : LOCATION_LABELS[screen] || '');
   const scene = screen === 'home' ? 'home-hub'
     : screen === 'guidebook' || screen === 'learn' ? 'learning-library'
       : screen === 'roadmap' ? 'world-map'
@@ -321,6 +326,7 @@ function AuthenticatedAppShell() {
       <HydrationGate>
         <Hud
           location={hudLocation}
+          activeNavigation={challengeWorkflowHeader?.activeNavigation}
           onNavigate={handleHudNavigate}
         />
         <AlgoNookGuide onNavigate={navigate} />
@@ -486,7 +492,7 @@ function AuthenticatedAppShell() {
           />
         )}
         {screen === 'profile' && <ProfileScreen onBack={() => navigate('roadmap')} onReview={() => navigate('review')} />}
-        {screen === 'challenges' && <ChallengeArenaScreen onBack={() => navigate('roadmap')} onChooseChapter={() => navigate('practice-choose')} onStartMission={(item) => navigate('brief', { mission: item })} />}
+        {screen === 'challenges' && <ChallengeArenaScreen onBack={() => navigate('roadmap')} onChooseChapter={() => navigate('practice-choose')} onOpenPrerequisite={(nodeId) => navigate('topic', { nodeId })} onStartMission={(item) => navigate('brief', { mission: item, origin: CHALLENGES_ORIGIN })} />}
         {screen === 'arena' && <ArenaScreen onBack={() => navigate('roadmap')} onOpenChallenges={() => navigate('challenges')} onChooseChapter={() => navigate('practice-choose')} onStartMission={(item) => navigate('brief', { mission: item })} />}
         {screen === 'leaderboard' && <LeaderboardScreen onBack={() => navigate('roadmap')} onProfile={() => navigate('profile')} />}
 
@@ -494,8 +500,10 @@ function AuthenticatedAppShell() {
         {screen === 'brief' && mission && (
           <BriefScreen
             mission={mission}
-            onDeploy={() => navigate('run')}
+            cleared={cleared}
+            onDeploy={() => navigate('run', { origin: route.origin })}
             onBack={() => {
+              if (route.origin === CHALLENGES_ORIGIN) return navigate('challenges');
               // Go back to topic if we came from one, otherwise roadmap
               if (selectedNodeId) navigate('topic', { nodeId: selectedNodeId });
               else navigate('roadmap');
@@ -508,8 +516,9 @@ function AuthenticatedAppShell() {
           mission.learningFlow ? (
             <LearningRunScreen
               mission={mission}
-              onFinish={(r) => navigate('debrief', { result: r })}
+              onFinish={(r) => navigate('debrief', { result: r, origin: route.origin })}
               onAbort={() => {
+                if (route.origin === CHALLENGES_ORIGIN) return navigate('challenges');
                 if (selectedNodeId) navigate('topic', { nodeId: selectedNodeId });
                 else navigate('roadmap');
               }}
@@ -517,8 +526,9 @@ function AuthenticatedAppShell() {
           ) : (
             <RunScreen
               mission={mission}
-              onFinish={(r) => navigate('debrief', { result: r })}
+              onFinish={(r) => navigate('debrief', { result: r, origin: route.origin })}
               onAbort={() => {
+                if (route.origin === CHALLENGES_ORIGIN) return navigate('challenges');
                 if (selectedNodeId) navigate('topic', { nodeId: selectedNodeId });
                 else navigate('roadmap');
               }}
@@ -530,9 +540,10 @@ function AuthenticatedAppShell() {
         {screen === 'debrief' && result && (
           <DebriefScreen
             result={result}
-            onNext={(m) => navigate('brief', { mission: m })}
-            onReplay={() => navigate('brief', { mission })}
-            onMap={() => navigate('roadmap')}
+            onNext={(m) => navigate('brief', { mission: m, origin: route.origin })}
+            onReplay={() => navigate('brief', { mission, origin: route.origin })}
+            onMap={() => navigate(getMissionReturnTarget(route.origin, 'roadmap'))}
+            mapLabel={route.origin === CHALLENGES_ORIGIN ? 'Challenges' : 'Sector map'}
             onReview={() => navigate('review')}
           />
         )}

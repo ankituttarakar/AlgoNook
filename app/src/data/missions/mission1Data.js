@@ -107,6 +107,7 @@ export const MISSION_1_DATA = {
 
       flowStep('code', 'CODE', 'Implement the function', 'implementation', {
         challenge: {
+          problemId: 'contains-duplicate',
           prompt: 'Write containsDuplicate(nums). Use the Set approach you selected. Check a value before recording it, and handle the no-duplicate case after the loop.',
           starter: 'function containsDuplicate(nums) {\n  // Write your implementation here\n}',
           starterCodeByLanguage: {

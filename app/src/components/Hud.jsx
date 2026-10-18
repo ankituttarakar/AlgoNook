@@ -15,10 +15,10 @@ const NAV_ITEMS = [
   { id: 'review', label: 'Review', icon: '↻' },
 ];
 
-export default function Hud({ location, onNavigate }) {
+export default function Hud({ location, activeNavigation, onNavigate }) {
   const { save, level, levelInfo, toggleSound } = useGame();
   const pct = Math.min(100, Math.round((levelInfo.into / levelInfo.span) * 100));
-  const active = location === 'Review & Mastery' ? 'review' : ['Practice', 'Adaptive Training Room', 'Choose a Practice Chapter'].includes(location) ? 'practice' : location === 'Competition Arena' ? 'leaderboard' : location === 'Battlefield Arena' ? 'arena' : location === 'Challenge Area' ? 'challenges' : location === 'AlgoNook Shorts' ? 'shorts' : location === 'Learn Feed' ? 'learn' : location === 'Learning Roadmap' ? 'roadmap' : location === 'Player Headquarters' ? 'home' : location === 'DSA Guidebook' ? 'guidebook' : ['Arrays Game Lab', 'Set Memory Sprint', 'Frequency Map Builder', 'Pointer Movement Game', 'Mission Brief', 'Results'].includes(location) || location?.endsWith('Reasoning Lab') ? 'challenges' : 'roadmap';
+  const active = activeNavigation || (location === 'Review & Mastery' ? 'review' : ['Practice', 'Adaptive Training Room', 'Choose a Practice Chapter'].includes(location) ? 'practice' : location === 'Competition Arena' ? 'leaderboard' : location === 'Battlefield Arena' ? 'arena' : location === 'Challenge Area' || location === 'Challenge Coding Lab' ? 'challenges' : location === 'AlgoNook Shorts' ? 'shorts' : location === 'Learn Feed' ? 'learn' : location === 'Learning Roadmap' ? 'roadmap' : location === 'Player Headquarters' ? 'home' : location === 'DSA Guidebook' ? 'guidebook' : ['Arrays Game Lab', 'Set Memory Sprint', 'Frequency Map Builder', 'Pointer Movement Game', 'Mission Brief', 'Results'].includes(location) || location?.endsWith('Reasoning Lab') ? 'challenges' : 'roadmap');
 
   return (
     <header className="app-header">

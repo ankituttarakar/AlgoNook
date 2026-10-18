@@ -52,6 +52,18 @@ type ApiResponse = {
   headers?: Record<string, string>;
 };
 
+function learnerSafeExecution(result: ExecutionResponse): ExecutionResponse {
+  return {
+    ...result,
+    tests: result.tests.map((test) => ({
+      id: test.id,
+      status: test.status,
+      ...(test.durationMs === undefined ? {} : { durationMs: test.durationMs }),
+      ...(test.error === undefined ? {} : { error: test.error }),
+    })),
+  };
+}
+
 function validateRequest(body: unknown): string | null {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return 'Request body must be a JSON object.';
@@ -162,10 +174,7 @@ export async function handleExecuteCode(
       trace: request.trace === true,
       env,
     });
-    return {
-      status: execution.status,
-      data: execution.result,
-    };
+    return { status: execution.status, data: learnerSafeExecution(execution.result) };
   } catch {
     return {
       status: 503,
