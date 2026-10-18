@@ -15,8 +15,8 @@ function retryAfterSeconds(milliseconds) {
 
 function pruneLocalAdmission(now) {
   for (const [userId, state] of localAdmission) {
-    for (const [leaseId, expiresAt] of state.leases) {
-      if (expiresAt <= now) state.leases.delete(leaseId);
+    for (const [leaseId, lease] of state.leases) {
+      if (lease.expiresAt <= now) state.leases.delete(leaseId);
     }
     if (state.leases.size === 0 && now - state.windowStartedAt >= EXECUTION_WINDOW_MS) {
       localAdmission.delete(userId);
@@ -24,7 +24,7 @@ function pruneLocalAdmission(now) {
   }
 }
 
-function reserveLocalExecution(userId, now) {
+function reserveLocalExecution(userId, now, requestIdentity) {
   pruneLocalAdmission(now);
   let state = localAdmission.get(userId);
   if (!state) {
@@ -39,6 +39,16 @@ function reserveLocalExecution(userId, now) {
     state.windowStartedAt = now;
     state.requestCount = 0;
   }
+  const duplicateLease = requestIdentity && [...state.leases.values()].find((lease) =>
+    lease.expiresAt > now
+      && (lease.eventId === requestIdentity.eventId || lease.eventKey === requestIdentity.eventKey));
+  if (duplicateLease) {
+    return {
+      admitted: false,
+      duplicate: true,
+      retryAfterSeconds: retryAfterSeconds(duplicateLease.expiresAt - now),
+    };
+  }
   if (state.requestCount >= EXECUTION_REQUEST_LIMIT) {
     return {
       admitted: false,
@@ -46,22 +56,26 @@ function reserveLocalExecution(userId, now) {
     };
   }
   if (state.leases.size >= EXECUTION_CONCURRENCY_LIMIT) {
-    const nextLeaseExpiry = Math.min(...state.leases.values());
+    const nextLeaseExpiry = Math.min(...[...state.leases.values()].map((lease) => lease.expiresAt));
     return { admitted: false, retryAfterSeconds: retryAfterSeconds(nextLeaseExpiry - now) };
   }
 
   state.requestCount += 1;
   const leaseId = randomUUID();
-  state.leases.set(leaseId, now + EXECUTION_LEASE_MS);
+  state.leases.set(leaseId, {
+    expiresAt: now + EXECUTION_LEASE_MS,
+    eventId: requestIdentity?.eventId,
+    eventKey: requestIdentity?.eventKey,
+  });
   return { admitted: true, leaseId };
 }
 
-export async function reserveCodeExecution(userId, env = process.env) {
+export async function reserveCodeExecution(userId, env = process.env, requestIdentity = null) {
   if (!env.DATABASE_URL) {
     if (env.NODE_ENV === 'production' || env.VERCEL === '1') {
       throw new Error('Shared execution admission storage is unavailable.');
     }
-    return reserveLocalExecution(userId, Date.now());
+    return reserveLocalExecution(userId, Date.now(), requestIdentity);
   }
 
   const sql = neon(env.DATABASE_URL);
@@ -73,7 +87,9 @@ export async function reserveCodeExecution(userId, env = process.env) {
       ${userId}, NOW(), 1,
       jsonb_build_array(jsonb_build_object(
         'id', ${leaseId},
-        'expiresAt', NOW() + (${EXECUTION_LEASE_MS} * INTERVAL '1 millisecond')
+        'expiresAt', NOW() + (${EXECUTION_LEASE_MS} * INTERVAL '1 millisecond'),
+        'eventId', ${requestIdentity?.eventId ?? null},
+        'eventKey', ${requestIdentity?.eventKey ?? null}
       )),
       NOW()
     )
@@ -92,7 +108,9 @@ export async function reserveCodeExecution(userId, env = process.env) {
         WHERE (active_lease.value->>'expiresAt')::timestamptz > NOW()
       ), '[]'::jsonb) || jsonb_build_array(jsonb_build_object(
         'id', ${leaseId},
-        'expiresAt', NOW() + (${EXECUTION_LEASE_MS} * INTERVAL '1 millisecond')
+        'expiresAt', NOW() + (${EXECUTION_LEASE_MS} * INTERVAL '1 millisecond'),
+        'eventId', ${requestIdentity?.eventId ?? null},
+        'eventKey', ${requestIdentity?.eventKey ?? null}
       )),
       updated_at = NOW()
     WHERE (
@@ -104,12 +122,34 @@ export async function reserveCodeExecution(userId, env = process.env) {
       FROM jsonb_array_elements(code_execution_admission.active_leases) AS active_lease(value)
       WHERE (active_lease.value->>'expiresAt')::timestamptz > NOW()
     ) < ${EXECUTION_CONCURRENCY_LIMIT}
+    AND NOT EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(code_execution_admission.active_leases) AS active_lease(value)
+      WHERE (active_lease.value->>'expiresAt')::timestamptz > NOW()
+        AND (
+          (${requestIdentity?.eventId ?? null}::text IS NOT NULL
+            AND active_lease.value->>'eventId' = ${requestIdentity?.eventId ?? null})
+          OR (${requestIdentity?.eventKey ?? null}::text IS NOT NULL
+            AND active_lease.value->>'eventKey' = ${requestIdentity?.eventKey ?? null})
+        )
+    )
     RETURNING clerk_user_id;
   `;
   if (reserved.length > 0) return { admitted: true, leaseId };
 
   const rejected = await sql`
-    SELECT CASE
+    SELECT EXISTS (
+      SELECT 1
+      FROM jsonb_array_elements(active_leases) AS active_lease(value)
+      WHERE (active_lease.value->>'expiresAt')::timestamptz > NOW()
+        AND (
+          (${requestIdentity?.eventId ?? null}::text IS NOT NULL
+            AND active_lease.value->>'eventId' = ${requestIdentity?.eventId ?? null})
+          OR (${requestIdentity?.eventKey ?? null}::text IS NOT NULL
+            AND active_lease.value->>'eventKey' = ${requestIdentity?.eventKey ?? null})
+        )
+    ) AS duplicate,
+    CASE
       WHEN window_started_at > NOW() - (${EXECUTION_WINDOW_MS} * INTERVAL '1 millisecond')
         AND request_count >= ${EXECUTION_REQUEST_LIMIT}
       THEN GREATEST(1, CEIL(EXTRACT(EPOCH FROM (
@@ -129,6 +169,7 @@ export async function reserveCodeExecution(userId, env = process.env) {
   `;
   return {
     admitted: false,
+    duplicate: rejected[0]?.duplicate === true,
     retryAfterSeconds: Number(rejected[0]?.retry_after_seconds) || 1,
   };
 }

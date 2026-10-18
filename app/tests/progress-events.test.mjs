@@ -40,6 +40,11 @@ function createHarness({ initial = {}, failAfterCommit = false } = {}) {
     skills: {},
     topics: {},
     events: new Map(),
+    executionReservations: 0,
+    executionReleases: 0,
+    executionCalls: 0,
+    activeLearningEvents: new Set(),
+    eventLeases: new Map(),
     progressPresent: true,
     userExists: true,
     ...initial,
@@ -53,6 +58,16 @@ function createHarness({ initial = {}, failAfterCommit = false } = {}) {
       throw new Error(`relation ${state.dbFailureQuery} does not exist`);
     }
     if (query.includes('SELECT id FROM users')) return state.userExists ? [{ id: 'db-user-a' }] : [];
+    if (query.includes('SELECT progress.reset_generation AS generation, event.id') && query.includes('event.idempotency_key')) {
+      const [eventId, userId] = values;
+      const existing = [...state.events.values()].find((event) => event.identityKey === `${userId}:${state.generation}:${eventId}`);
+      return [{ generation: state.generation, id: existing ? 'existing-event' : null }];
+    }
+    if (query.includes('event.event_type') && query.includes('event.event_key')) {
+      const [eventType, eventKey] = values;
+      const existing = [...state.events.values()].find((event) => event.rewardKey === `db-user-a:${state.generation}:${eventType}:${eventKey}`);
+      return [{ generation: state.generation, id: existing ? 'existing-event' : null }];
+    }
     if (query.includes('SELECT xp, level, sound, booted, reset_generation, updated_at')
       && query.includes('FROM user_progress')) {
       return state.progressPresent
@@ -122,9 +137,9 @@ function createHarness({ initial = {}, failAfterCommit = false } = {}) {
         mastery_level: item.masteryLevel,
         attempts: item.attempts,
         successful_independent_solves: item.successfulIndependentSolves,
-        highest_hint_level_revealed: 0,
-        total_hints_used: 0,
-        ladder_reveals: [0, 0, 0, 0, 0, 0],
+        highest_hint_level_revealed: item.hintUsage?.highestLevelHintRevealed || 0,
+        total_hints_used: item.hintUsage?.totalHintsUsed || 0,
+        ladder_reveals: item.hintUsage?.ladderReveals || [0, 0, 0, 0, 0, 0],
         last_practiced_at: item.lastPracticed ? new Date(item.lastPracticed) : null,
         review_due_at: item.reviewDue ? new Date(item.reviewDue) : null,
       }));
@@ -191,6 +206,15 @@ function createHarness({ initial = {}, failAfterCommit = false } = {}) {
           masteryLevel: tier,
           attempts,
           successfulIndependentSolves: successes,
+          hintUsage: {
+            totalHintsUsed: (current.hintUsage?.totalHintsUsed || 0) + (metadata.hintLevelsUsed || []).length,
+            highestLevelHintRevealed: Math.max(
+              current.hintUsage?.highestLevelHintRevealed || 0,
+              ...(metadata.hintLevelsUsed || []),
+            ),
+            ladderReveals: (current.hintUsage?.ladderReveals || [0, 0, 0, 0, 0, 0])
+              .map((count, index) => count + ((metadata.hintLevelsUsed || []).includes(index + 1) ? 1 : 0)),
+          },
           lastPracticed: Date.now(),
           reviewDue: Date.now() + 86400000,
         };
@@ -215,14 +239,38 @@ function createHarness({ initial = {}, failAfterCommit = false } = {}) {
       createSql: () => sql,
       checkSchema: async () => ({ compatible: true }),
       persistEvent,
-      execute: async ({ problem }) => ({
-        status: 200,
-        result: {
-          status: 'PASSED',
-          summary: { passed: problem.testCases.length, total: problem.testCases.length },
-          tests: problem.testCases.map((item) => ({ id: item.id, status: 'PASSED' })),
-        },
-      }),
+      reserve: async (_userId, _env, requestIdentity) => {
+        if (state.activeLearningEvents.has(`id:${requestIdentity.eventId}`)
+          || state.activeLearningEvents.has(`key:${requestIdentity.eventKey}`)) {
+          return { admitted: false, duplicate: true, retryAfterSeconds: 1 };
+        }
+        state.executionReservations += 1;
+        const leaseId = `event-lease-${state.executionReservations}`;
+        state.activeLearningEvents.add(`id:${requestIdentity.eventId}`);
+        state.activeLearningEvents.add(`key:${requestIdentity.eventKey}`);
+        state.eventLeases.set(leaseId, requestIdentity);
+        return { admitted: true, leaseId };
+      },
+      release: async (_userId, leaseId) => {
+        state.executionReleases += 1;
+        const requestIdentity = state.eventLeases.get(leaseId);
+        if (requestIdentity) {
+          state.activeLearningEvents.delete(`id:${requestIdentity.eventId}`);
+          state.activeLearningEvents.delete(`key:${requestIdentity.eventKey}`);
+          state.eventLeases.delete(leaseId);
+        }
+      },
+      execute: async ({ problem }) => {
+        state.executionCalls += 1;
+        return {
+          status: 200,
+          result: {
+            status: 'PASSED',
+            summary: { passed: problem.testCases.length, total: problem.testCases.length },
+            tests: problem.testCases.map((item) => ({ id: item.id, status: 'PASSED' })),
+          },
+        };
+      },
     },
   };
 }
@@ -269,6 +317,9 @@ test('valid coding completion is rerun by the server and produces bounded progre
   assert.equal(result.data.snapshot.missions[missionId].stars, 1);
   assert.equal(result.data.snapshot.skills['arrays-max-profit'].masteryLevel, 'guided');
   assert.equal(harness.state.events.size, 1);
+  assert.equal(harness.state.executionReservations, 1);
+  assert.equal(harness.state.executionReleases, 1);
+  assert.equal(harness.state.executionCalls, 1);
 });
 
 test('a client-supplied pass flag cannot replace server execution', async () => {
@@ -298,6 +349,54 @@ test('duplicate events and replayed mission reward keys never award XP twice', a
   assert.equal(retry.data.awardedXp, 0);
   assert.equal(replay.data.duplicate, true);
   assert.equal(harness.state.xp, 95);
+  assert.equal(harness.state.executionReservations, 1);
+  assert.equal(harness.state.executionCalls, 1);
+});
+
+test('learning-event code execution uses shared admission and returns a retryable limit response', async () => {
+  const harness = createHarness();
+  harness.dependencies.reserve = async () => ({ admitted: false, retryAfterSeconds: 17 });
+  const result = await handleLearningEvent(codingEvent(), headers, env, harness.dependencies);
+  assert.equal(result.status, 429);
+  assert.equal(result.headers['Retry-After'], '17');
+  assert.equal(harness.state.executionCalls, 0);
+  assert.equal(harness.state.events.size, 0);
+
+  const duplicate = createHarness();
+  duplicate.dependencies.reserve = async () => ({ admitted: false, duplicate: true, retryAfterSeconds: 1 });
+  const inProgress = await handleLearningEvent(codingEvent(), headers, env, duplicate.dependencies);
+  assert.equal(inProgress.status, 409);
+  assert.equal(inProgress.data.code, 'EVENT_IN_PROGRESS');
+  assert.equal(inProgress.headers['Retry-After'], '1');
+  assert.equal(duplicate.state.executionCalls, 0);
+});
+
+test('verified hint levels persist in the returned mastery snapshot exactly once', async () => {
+  const harness = createHarness();
+  const request = codingEvent({ hintLevelsUsed: [1, 2, 3] });
+  const first = await handleLearningEvent(request, headers, env, harness.dependencies);
+  assert.equal(first.status, 200);
+  assert.deepEqual(first.data.snapshot.skills['arrays-max-profit'].hintUsage, {
+    totalHintsUsed: 3,
+    highestLevelHintRevealed: 3,
+    ladderReveals: [1, 1, 1, 0, 0, 0],
+  });
+  const hydrated = await handleGetProgress(headers, env, harness.dependencies);
+  assert.deepEqual(hydrated.data.skills['arrays-max-profit'].hintUsage, first.data.snapshot.skills['arrays-max-profit'].hintUsage);
+
+  const retry = await handleLearningEvent(request, headers, env, harness.dependencies);
+  assert.equal(retry.status, 200);
+  assert.equal(retry.data.duplicate, true);
+  assert.deepEqual(retry.data.snapshot.skills['arrays-max-profit'].hintUsage, first.data.snapshot.skills['arrays-max-profit'].hintUsage);
+  assert.equal(harness.state.executionCalls, 1);
+});
+
+test('hint usage is bounded to a valid ladder prefix on a verified event', async () => {
+  const harness = createHarness();
+  const invalid = await handleLearningEvent(codingEvent({ hintLevelsUsed: [1, 3] }), headers, env, harness.dependencies);
+  assert.equal(invalid.status, 400);
+  assert.equal(harness.state.executionCalls, 0);
+  assert.equal(harness.state.executionReservations, 0);
 });
 
 test('a due review requires a verified solve and awards only its fixed reward', async () => {
@@ -379,6 +478,9 @@ test('concurrent tabs cannot award a mission twice', async () => {
   assert.equal(results.reduce((sum, result) => sum + (result.data.awardedXp || 0), 0), 95);
   assert.equal(harness.state.events.size, 1);
   assert.equal(harness.state.xp, 95);
+  assert.equal(harness.state.executionCalls, 1);
+  assert.equal(harness.state.executionReservations, 1);
+  assert.equal(results.filter((result) => result.status === 409 && result.data.code === 'EVENT_IN_PROGRESS').length, 1);
 });
 
 test('authoritative progress hydration still returns existing aggregate records', async () => {
@@ -566,6 +668,24 @@ test('stale generation event is rejected after reset without restoring progress'
   assert.deepEqual(harness.state.missions, {});
   assert.deepEqual(harness.state.skills, {});
   assert.deepEqual(harness.state.topics, {});
+  assert.equal(harness.state.executionReservations, 0);
+});
+
+test('reset clears persisted hint usage and advances the generation fence', async () => {
+  const harness = createHarness();
+  const completed = await handleLearningEvent(codingEvent({ hintLevelsUsed: [1, 2] }), headers, env, harness.dependencies);
+  assert.equal(completed.status, 200);
+  assert.equal(completed.data.snapshot.skills['arrays-max-profit'].hintUsage.totalHintsUsed, 2);
+
+  const reset = await handleSaveProgress({ reset: true }, headers, env, harness.dependencies);
+  assert.equal(reset.status, 200);
+  assert.equal(reset.data.progress.generation, 1);
+  assert.deepEqual(reset.data.skills, {});
+
+  const stale = await handleLearningEvent(codingEvent({ hintLevelsUsed: [1, 2] }), headers, env, harness.dependencies);
+  assert.equal(stale.status, 409);
+  assert.equal(stale.data.code, 'STALE_GENERATION');
+  assert.equal(harness.state.executionReservations, 1);
 });
 
 test('event committed before reset is cleared and its ledger key remains consumed', async () => {

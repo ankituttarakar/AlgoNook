@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { getAuthStatePath } from '../scripts/qa-safety.js';
 
 // Cross-browser progress persistence (server-authoritative contract):
 //   1. The authenticated UI must not render progress until the Neon snapshot loads.
@@ -6,10 +7,9 @@ import { expect, test } from '@playwright/test';
 //   3. A fresh browser profile with an EMPTY local cache must show the exact
 //      same progress as the previous session — proving Neon, not localStorage,
 //      is the source of truth.
-test.use({ storageState: 'auth.json' });
 test.setTimeout(240_000);
 
-const APP = 'http://localhost:3000';
+const APP = '/';
 const CACHE_KEY = 'algonook.save.v1';
 const ROADMAP = () => /DSA Roadmap|Learning Roadmap/i;
 const isProgressPost = (response) =>
@@ -80,7 +80,7 @@ test('hydration gate blocks progress UI until the server snapshot arrives', asyn
 
 test('writes reach Neon and reproduce identically in a fresh browser profile', async ({ browser }) => {
   // ── Session 1: hydrated, empty cache does not matter — server fills state. ──
-  const ctx1 = await browser.newContext({ storageState: 'auth.json' });
+  const ctx1 = await browser.newContext({ storageState: getAuthStatePath() });
   const page1 = await ctx1.newPage();
   await bootToRoadmap(page1);
 
@@ -124,7 +124,7 @@ test('writes reach Neon and reproduce identically in a fresh browser profile', a
   // auth.json may itself carry a stale progress cache (older snapshot) — exactly
   // the trap this architecture avoids. The init script records what a naive
   // app WOULD have read, wipes it, and proves the app boots with no cache at all.
-  const ctx2 = await browser.newContext({ storageState: 'auth.json' });
+  const ctx2 = await browser.newContext({ storageState: getAuthStatePath() });
   await ctx2.addInitScript((key) => {
     try {
       window.__staleCacheAtBoot = localStorage.getItem(key);

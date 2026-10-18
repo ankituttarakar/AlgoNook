@@ -4,7 +4,7 @@ import { CONCEPT_MAP } from '../src/data/concepts.js';
 import { getPracticeForNode } from '../src/data/practice.js';
 import { MISSION_1_DATA } from '../src/data/missions/mission1Data.js';
 
-test.use({ storageState: 'auth.json', video: 'on', trace: 'on', screenshot: 'on' });
+test.use({ video: 'on', screenshot: 'on' });
 test.setTimeout(120_000);
 
 test('Arrays reasoning lab solves each stage and records completion', async ({ page }, testInfo) => {
@@ -15,7 +15,7 @@ test('Arrays reasoning lab solves each stage and records completion', async ({ p
   page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()); });
   page.on('pageerror', (error) => pageErrors.push(error.message));
   page.on('requestfailed', (request) => failedRequests.push(`${request.method()} ${request.url()}: ${request.failure()?.errorText}`));
-  await page.goto('http://localhost:3000');
+  await page.goto('/');
   await expect(page.getByText(/DSA Roadmap|Learning Roadmap/i).first()).toBeVisible({ timeout: 30000 });
   await page.getByRole('button', { name: /Arrays/i }).first().click();
   await page.getByRole('button', { name: /Start Learning/i }).click();

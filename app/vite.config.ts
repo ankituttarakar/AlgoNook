@@ -6,6 +6,7 @@ import dotenv from 'dotenv'
 import { handleSyncUser } from './api/sync-user'
 import { handleGetProgress, handleSaveProgress } from './api/progress'
 import { handleExecuteCode } from './api/code/execute'
+import { handleGetShorts } from './api/shorts'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -183,6 +184,29 @@ export default defineConfig(({ mode }) => {
           res.statusCode = 405;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ ok: false, error: 'Method Not Allowed' }));
+        });
+
+        server.middlewares.use('/api/shorts', async (req, res) => {
+          res.setHeader('Content-Type', 'application/json');
+          if (req.method !== 'GET') {
+            res.statusCode = 405;
+            res.setHeader('Allow', 'GET');
+            res.end(JSON.stringify({ ok: false, error: 'Method Not Allowed' }));
+            return;
+          }
+
+          try {
+            const url = new URL(req.url || '', `http://${req.headers.host || 'localhost'}`);
+            const topic = url.searchParams.get('topic') || 'all';
+            const pageToken = url.searchParams.get('pageToken') || '';
+            const limit = Number(url.searchParams.get('limit')) || 8;
+            const result = await handleGetShorts({ topic, pageToken, limit }, req.headers, process.env);
+            res.statusCode = result.status;
+            res.end(JSON.stringify(result.data));
+          } catch (err) {
+            res.statusCode = 500;
+            res.end(JSON.stringify({ ok: false, error: 'Failed to fetch shorts' }));
+          }
         });
       },
     },

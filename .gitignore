@@ -12,13 +12,30 @@ build/
 .env.*
 !.env.example
 auth.json
+**/auth.json
+**/*.storage-state.json
 playwright/.auth/
+**/playwright/.auth/
+.qa-temp/
+**/.qa-temp/
+.local-secrets/
+**/.local-secrets/
+
+# Local certificates and private keys
+*.pem
+*.p12
+*.pfx
+*.key
 
 # Playwright artifacts
 test-results/
+**/test-results/
 playwright-report/
+**/playwright-report/
 blob-report/
 playwright/.cache/
+qa-report.json
+console-page-network.json
 
 # Python
 __pycache__/

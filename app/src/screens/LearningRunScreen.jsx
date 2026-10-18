@@ -39,6 +39,7 @@ export default function LearningRunScreen({ mission, onFinish, onAbort }) {
 
   const [currentStageIndex, setCurrentStageIndex] = useState(0);
   const [maxHintLevelUsed, setMaxHintLevelUsed] = useState(0);
+  const [hintLevelsUsed, setHintLevelsUsed] = useState([]);
   const [eventStatus, setEventStatus] = useState('idle');
   const [eventError, setEventError] = useState('');
 
@@ -46,6 +47,7 @@ export default function LearningRunScreen({ mission, onFinish, onAbort }) {
 
   const handleHintRevealed = (level) => {
     setMaxHintLevelUsed((prev) => Math.max(prev, level));
+    setHintLevelsUsed((prev) => prev.includes(level) ? prev : [...prev, level].sort((a, b) => a - b));
   };
 
   const handleMistake = () => {};
@@ -79,6 +81,7 @@ export default function LearningRunScreen({ mission, onFinish, onAbort }) {
         language: verifiedEvidence.language,
         sourceCode: verifiedEvidence.sourceCode,
         evidence: verifiedEvidence.evidence,
+        hintLevelsUsed,
       });
       if (result.snapshot.progress.level > previousLevel) sfx.levelup();
       sfx.unlock();

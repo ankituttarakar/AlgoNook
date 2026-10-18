@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FREQUENCY_MAP_PROBLEM } from '../api/code/problems/frequencyMap.mjs';
+import { FREQUENCY_MAP_PROBLEM } from '../server/code/problems/frequencyMap.mjs';
 import { GAME_LAB_BY_NODE } from '../src/data/games/index.js';
 import { getPatternForNode } from '../src/data/patterns.js';
 import { getPracticeForNode } from '../src/data/practice.js';

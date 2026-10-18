@@ -4,15 +4,15 @@ import { Readable } from 'node:stream';
 import test from 'node:test';
 import { createRunnerServer } from '../server/code/runner-service.mjs';
 import { createRunnerSignature } from '../server/code/runnerProtocol.mjs';
-import { executePythonJob } from '../api/code/runnerClient.mjs';
+import { executePythonJob } from '../server/code/runnerClient.mjs';
 import { handleExecuteCode } from '../api/code/execute.ts';
 import {
   EXECUTION_CONCURRENCY_LIMIT,
   EXECUTION_REQUEST_LIMIT,
   releaseCodeExecution,
   reserveCodeExecution,
-} from '../api/code/executionAdmission.mjs';
-import { getCodeProblemById } from '../api/code/problems/index.mjs';
+} from '../server/code/executionAdmission.mjs';
+import { getCodeProblemById } from '../server/code/problems/index.mjs';
 
 const SECRET = 'test-only-runner-secret-32-bytes-minimum';
 
@@ -207,6 +207,25 @@ test('local admission bounds active leases and request counts per verified user'
   const overQuota = await reserveCodeExecution(userId, env);
   assert.equal(overQuota.admitted, false);
   assert.ok(overQuota.retryAfterSeconds >= 1);
+});
+
+test('local admission coalesces concurrent learning-event execution identities', async () => {
+  const userId = `learning-event-admission-${randomUUID()}`;
+  const env = { NODE_ENV: 'test' };
+  const requestIdentity = {
+    eventId: randomUUID(),
+    eventKey: 'mission_completed:mission:code-max-profit',
+  };
+  const first = await reserveCodeExecution(userId, env, requestIdentity);
+  const duplicate = await reserveCodeExecution(userId, env, requestIdentity);
+  assert.equal(first.admitted, true);
+  assert.equal(duplicate.admitted, false);
+  assert.equal(duplicate.duplicate, true);
+
+  await releaseCodeExecution(userId, first.leaseId, env);
+  const afterRelease = await reserveCodeExecution(userId, env, requestIdentity);
+  assert.equal(afterRelease.admitted, true);
+  await releaseCodeExecution(userId, afterRelease.leaseId, env);
 });
 
 test('production admission fails closed without shared storage', async () => {

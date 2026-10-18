@@ -20,6 +20,8 @@ Browser
 
 The Vercel function never runs Docker or learner code. In production it requires `CODE_RUNNER_URL` and `CODE_RUNNER_SECRET`; if either is absent or invalid, execution fails closed with `SANDBOX_ERROR`. It does not fall back to local Docker in Vercel. Local Vite development may use Docker on the developer machine when `CODE_RUNNER_URL` is not configured.
 
+Coding mission and review submissions through `POST /api/progress/events` use the same per-user admission helper and limits as `/api/code/execute`. Before reserving a lease or running code, the event API checks the authenticated user's current reset generation and existing event idempotency key/reward key. Admission leases also carry those event identities, so concurrent duplicate submissions are rejected without incrementing the quota or starting another runner job. The lease remains held through the idempotent event write; retries of a completed event return the authoritative snapshot without using runner capacity. Final event persistence still enforces idempotency and reset-generation fencing atomically.
+
 ## Vercel API contract
 
 `POST /api/code/execute` requires an authenticated Clerk session and accepts exactly:
@@ -33,13 +35,13 @@ The Vercel function never runs Docker or learner code. In production it requires
 }
 ```
 
-The request body is limited to 400 KiB by the Vercel function parser; Python source is limited to 64 KiB UTF-8. Unknown fields, including learner-supplied tests, are rejected. The API resolves `problemId` through `api/code/problems/index.mjs`; arbitrary commands, runner image names, shell arguments, and file paths are not accepted.
+The request body is limited to 400 KiB by the Vercel function parser; Python source is limited to 64 KiB UTF-8. Unknown fields, including learner-supplied tests, are rejected. The API resolves `problemId` through `server/code/problems/index.mjs`; arbitrary commands, runner image names, shell arguments, and file paths are not accepted.
 
 After authentication and validation, the API admits up to 12 executions per verified Clerk user in a fixed 60-second window and at most 2 concurrent runs for that user. Admission is stored atomically in Neon so separate Vercel instances share the same limits. Execution leases expire after 35 seconds (the remote runner request timeout is 27 seconds) and are released after the request completes. Rejected requests receive HTTP 429 with `Retry-After`. Local development without `DATABASE_URL` uses a bounded process-local fallback; production/Vercel fails closed if shared admission storage is unavailable.
 
 Run `npm run db:migrate` from `app/` against the intended database before enabling this version. The ordered migration is additive and is not applied automatically. Each verified Clerk user has one small admission row; it stores the current request window and at most two short-lived execution leases.
 
-The Vercel function sends only the selected problem ID, source, and trace flag to the execution service. The execution service independently resolves the problem ID using the trusted repository registry and supplies that problem's server-owned test cases to the existing sandbox. This prevents the browser from choosing tests or expected answers.
+The Vercel function sends only the selected problem ID, source, and trace flag to the execution service. The execution service independently resolves the problem ID using the trusted repository registry and supplies that problem's server-owned test cases to the existing sandbox. This prevents the browser from choosing tests or expected answers. The learning-event function allows up to 60 seconds so the 27-second bounded runner round trip leaves time for admission, trusted verification, persistence, and the authoritative snapshot refresh; configure the Vercel deployment plan to permit that function duration. The runner timeout and sandbox execution limits remain unchanged.
 
 The response shape remains compatible with the coding workspace: `ok`, normalized `status`, `summary`, `tests`, bounded `stdout`/`stderr`, `executionTimeMs`, optional error, and optional trace. The Vercel adapter bounds the response to 512 KiB and rejects malformed results. It does not award XP or mastery; those remain separate client-driven progress records and are not made authoritative by this execution boundary.
 
@@ -61,11 +63,11 @@ npm run sandbox:build
 
 Configure the same randomly generated secret of at least 32 bytes as `CODE_RUNNER_SECRET` on the runner host and the Vercel project. Configure Vercel `CODE_RUNNER_URL` to the HTTPS reverse-proxy origin for the runner service. Keep this secret server-only; do not use a `VITE_` prefix. Start the service under a process supervisor and use the reverse proxy for TLS, request rate limits, and network access control. The service's default listener is loopback; if the proxy runs in a separate container, bind only to the private container network using `RUNNER_BIND_ADDRESS` and keep that network inaccessible to the public internet.
 
-Build the Python sandbox image on every runner host before accepting requests. A missing image or unavailable Docker daemon returns a clean sandbox failure. The runner image tag is pinned in `api/code/pythonRunner.mjs` (`algonook-python-runner:3.12.11`).
+Build the Python sandbox image on every runner host before accepting requests. A missing image or unavailable Docker daemon returns a clean sandbox failure. The runner image tag is pinned in `server/code/pythonRunner.mjs` (`algonook-python-runner:3.12.11`).
 
 ## Isolation retained
 
-`api/code/pythonRunner.mjs` uses fixed Docker argument arrays with `shell: false`. The learner container keeps the existing restrictions:
+`server/code/pythonRunner.mjs` uses fixed Docker argument arrays with `shell: false`. The learner container keeps the existing restrictions:
 
 - no network (`--network none`)
 - read-only root filesystem and a bounded temporary filesystem

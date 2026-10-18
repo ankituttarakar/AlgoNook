@@ -10,10 +10,11 @@
     "preview": "vite preview",
     "db:migrate": "node scripts/migrate.js",
     "runner:service": "node server/code/runner-service.mjs",
-    "sandbox:build": "docker build -t algonook-python-runner:3.12.11 -f api/code/python-runner/Dockerfile api/code/python-runner",
+    "sandbox:build": "docker build -t algonook-python-runner:3.12.11 -f server/code/python-runner/Dockerfile server/code/python-runner",
     "test:sandbox": "node scripts/test-python-sandbox.mjs",
     "test:contains-duplicate": "node scripts/test-contains-duplicate.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:qa": "node scripts/run-qa.js"
   },
   "dependencies": {
     "@clerk/backend": "^3.22.0",

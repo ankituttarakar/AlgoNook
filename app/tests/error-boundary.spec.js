@@ -10,10 +10,10 @@ import { expect, test } from '@playwright/test';
 //   6. Auth (401) failure shows the HydrationGate error screen, not a blank page.
 //   7. A signed-out visitor gets the landing screen, not a blank page.
 
-test.use({ storageState: 'auth.json', video: 'off', trace: 'on-first-retry' });
+test.use({ video: 'off' });
 test.setTimeout(240_000);
 
-const APP = 'http://localhost:3000';
+const APP = '/';
 const PROGRESS_API = '**/api/progress*';
 
 const ROADMAP_HEADING = () => /DSA Roadmap/i;
@@ -55,7 +55,7 @@ test('normal startup renders the roadmap with no crash UI', async ({ page }) => 
 });
 
 test('component crash shows a branded recovery screen and leaks nothing', async ({ page }) => {
-  await page.goto(`${APP}/?qa_crash=screen`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${APP}?qa_crash=screen`, { waitUntil: 'domcontentloaded' });
 
   const box = fallback(page);
   await expect(box).toBeVisible({ timeout: 30_000 });

@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { CONTAINS_DUPLICATE_PROBLEM } from '../api/code/problems/containsDuplicate.mjs';
-import { FREQUENCY_MAP_PROBLEM } from '../api/code/problems/frequencyMap.mjs';
-import { TWO_SUM_SORTED_PROBLEM } from '../api/code/problems/twoSumSorted.mjs';
+import { CONTAINS_DUPLICATE_PROBLEM } from '../server/code/problems/containsDuplicate.mjs';
+import { FREQUENCY_MAP_PROBLEM } from '../server/code/problems/frequencyMap.mjs';
+import { TWO_SUM_SORTED_PROBLEM } from '../server/code/problems/twoSumSorted.mjs';
 import { executePythonSandbox } from '../server/code/pythonRunner.mjs';
 
 const image = 'algonook-python-runner:3.12.11';
