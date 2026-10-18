@@ -1,5 +1,6 @@
 import { MISSIONS, MISSION_MAP, isUnlocked } from './missions/index.js';
-import { ROADMAP_NODE_MAP, ROADMAP_NODES, computeNodeState, isChapterComplete } from './roadmap.js';
+import { ROADMAP_NODE_MAP, computeNodeState, isChapterComplete } from './roadmap.js';
+import { resolveRoadmapNodeForMission } from './missionEligibility.js';
 
 export const CODING_CHALLENGES = MISSIONS.filter((mission) => !!mission.problemFlow);
 
@@ -9,13 +10,6 @@ export function filterCodingChallenges(challenges, { topic = 'all', difficulty =
     return (topic === 'all' || mission.topic === topic)
       && (difficulty === 'all' || mission.problemFlow.difficulty === difficulty);
   });
-}
-
-function roadmapNodeForMission(mission) {
-  return ROADMAP_NODES.find((node) => node.id === mission.roadmapNodeId)
-    || ROADMAP_NODES.find((node) => node.id === mission.chapter)
-    || ROADMAP_NODES.find((node) => node.topicId === mission.topic || node.missionTopics?.includes(mission.topic))
-    || null;
 }
 
 function firstIncompletePrerequisites(node, progress, visited = new Set()) {
@@ -48,7 +42,7 @@ export function getChallengeStatus(mission, progress) {
   const normalized = { cleared, topics: progress?.topics || {}, skills: progress?.skills || {} };
   if (cleared[mission.id]) return { status: 'cleared', prerequisites: [] };
 
-  const node = roadmapNodeForMission(mission);
+  const node = resolveRoadmapNodeForMission(mission);
   const missingMissions = missionPrerequisites(mission, cleared);
   const missingChapters = node
     ? firstIncompletePrerequisites(node, normalized)

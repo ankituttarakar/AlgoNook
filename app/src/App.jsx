@@ -9,7 +9,7 @@ import { useLocation, useNavigate as useRouterNavigate } from 'react-router';
 import { useUser, useAuth } from '@clerk/react';
 import { GameProvider, useGame } from './game/GameContext.jsx';
 import { syncClerkUser } from './lib/db.ts';
-import { appendWorkflowOrigin, CHALLENGES_ORIGIN, createNavigationRequest, getChallengeWorkflowHeader, getMissionReturnTarget, getNavigationOrigin } from './lib/navigationOrigin.mjs';
+import { appendWorkflowOrigin, ARENA_ORIGIN, CHALLENGES_ORIGIN, createNavigationRequest, getWorkflowHeader, getMissionReturnTarget, getNavigationOrigin } from './lib/navigationOrigin.mjs';
 import Hud from './components/Hud.jsx';
 import AlgoNookGuide from './components/AlgoNookGuide.jsx';
 import { PageScene } from './components/PageScene.jsx';
@@ -274,8 +274,8 @@ function AuthenticatedAppShell() {
     else navigate('topic', { nodeId: recommendation.nodeId });
   };
 
-  const challengeWorkflowHeader = getChallengeWorkflowHeader(route.origin, screen);
-  const hudLocation = challengeWorkflowHeader?.location || (screen === 'topic'
+  const workflowHeader = getWorkflowHeader(route.origin, screen);
+  const hudLocation = workflowHeader?.location || (screen === 'topic'
     ? ROADMAP_NODES.find((node) => node.id === selectedNodeId)?.label || 'Topic'
     : screen === 'game'
       ? `${ROADMAP_NODES.find((node) => node.id === selectedNodeId)?.label || 'DSA'} Reasoning Lab`
@@ -326,7 +326,7 @@ function AuthenticatedAppShell() {
       <HydrationGate>
         <Hud
           location={hudLocation}
-          activeNavigation={challengeWorkflowHeader?.activeNavigation}
+          activeNavigation={workflowHeader?.activeNavigation}
           onNavigate={handleHudNavigate}
         />
         <AlgoNookGuide onNavigate={navigate} />
@@ -493,7 +493,7 @@ function AuthenticatedAppShell() {
         )}
         {screen === 'profile' && <ProfileScreen onBack={() => navigate('roadmap')} onReview={() => navigate('review')} />}
         {screen === 'challenges' && <ChallengeArenaScreen onBack={() => navigate('roadmap')} onChooseChapter={() => navigate('practice-choose')} onOpenPrerequisite={(nodeId) => navigate('topic', { nodeId })} onStartMission={(item) => navigate('brief', { mission: item, origin: CHALLENGES_ORIGIN })} />}
-        {screen === 'arena' && <ArenaScreen onBack={() => navigate('roadmap')} onOpenChallenges={() => navigate('challenges')} onChooseChapter={() => navigate('practice-choose')} onStartMission={(item) => navigate('brief', { mission: item })} />}
+        {screen === 'arena' && <ArenaScreen onBack={() => navigate('roadmap')} onOpenChallenges={() => navigate('challenges')} onChooseChapter={() => navigate('practice-choose')} onStartMission={(item) => navigate('brief', { mission: item, origin: ARENA_ORIGIN })} />}
         {screen === 'leaderboard' && <LeaderboardScreen onBack={() => navigate('roadmap')} onProfile={() => navigate('profile')} />}
 
         {/* ── BRIEF ── */}
@@ -503,7 +503,8 @@ function AuthenticatedAppShell() {
             cleared={cleared}
             onDeploy={() => navigate('run', { origin: route.origin })}
             onBack={() => {
-              if (route.origin === CHALLENGES_ORIGIN) return navigate('challenges');
+              const returnTarget = getMissionReturnTarget(route.origin, null);
+              if (returnTarget) return navigate(returnTarget);
               // Go back to topic if we came from one, otherwise roadmap
               if (selectedNodeId) navigate('topic', { nodeId: selectedNodeId });
               else navigate('roadmap');
@@ -518,7 +519,8 @@ function AuthenticatedAppShell() {
               mission={mission}
               onFinish={(r) => navigate('debrief', { result: r, origin: route.origin })}
               onAbort={() => {
-                if (route.origin === CHALLENGES_ORIGIN) return navigate('challenges');
+                const returnTarget = getMissionReturnTarget(route.origin, null);
+                if (returnTarget) return navigate(returnTarget);
                 if (selectedNodeId) navigate('topic', { nodeId: selectedNodeId });
                 else navigate('roadmap');
               }}
@@ -528,7 +530,8 @@ function AuthenticatedAppShell() {
               mission={mission}
               onFinish={(r) => navigate('debrief', { result: r, origin: route.origin })}
               onAbort={() => {
-                if (route.origin === CHALLENGES_ORIGIN) return navigate('challenges');
+                const returnTarget = getMissionReturnTarget(route.origin, null);
+                if (returnTarget) return navigate(returnTarget);
                 if (selectedNodeId) navigate('topic', { nodeId: selectedNodeId });
                 else navigate('roadmap');
               }}
@@ -543,7 +546,7 @@ function AuthenticatedAppShell() {
             onNext={(m) => navigate('brief', { mission: m, origin: route.origin })}
             onReplay={() => navigate('brief', { mission, origin: route.origin })}
             onMap={() => navigate(getMissionReturnTarget(route.origin, 'roadmap'))}
-            mapLabel={route.origin === CHALLENGES_ORIGIN ? 'Challenges' : 'Sector map'}
+            mapLabel={route.origin === CHALLENGES_ORIGIN ? 'Challenges' : route.origin === ARENA_ORIGIN ? 'Battlefield Arena' : 'Sector map'}
             onReview={() => navigate('review')}
           />
         )}

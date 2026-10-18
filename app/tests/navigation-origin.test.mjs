@@ -2,10 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { MISSION_MAP } from '../src/data/missions/index.js';
 import {
+  ARENA_ORIGIN,
   CHALLENGES_ORIGIN,
   appendWorkflowOrigin,
   createNavigationRequest,
   getChallengeWorkflowHeader,
+  getWorkflowHeader,
   getMissionReturnTarget,
   getNavigationOrigin,
 } from '../src/lib/navigationOrigin.mjs';
@@ -30,6 +32,21 @@ test('challenge-origin workflow keeps Challenges selected and labels the shared 
   assert.equal(getChallengeWorkflowHeader(CHALLENGES_ORIGIN, 'practice'), null);
 });
 
+test('Arena-origin workflow keeps Battlefield Arena selected through briefing, coding, and results', () => {
+  for (const screen of ['brief', 'run', 'debrief']) {
+    assert.deepEqual(getWorkflowHeader(ARENA_ORIGIN, screen), {
+      location: 'Battlefield Coding Lab',
+      activeNavigation: 'arena',
+    });
+  }
+  assert.equal(appendWorkflowOrigin('/challenge/code-kth-largest/brief', ARENA_ORIGIN), '/challenge/code-kth-largest/brief?from=arena');
+  assert.equal(appendWorkflowOrigin('/challenge/code-kth-largest/run', ARENA_ORIGIN), '/challenge/code-kth-largest/run?from=arena');
+  assert.equal(appendWorkflowOrigin('/results', ARENA_ORIGIN), '/results?from=arena');
+  assert.equal(getNavigationOrigin('?from=arena'), ARENA_ORIGIN);
+  assert.equal(getMissionReturnTarget(ARENA_ORIGIN, 'roadmap'), 'arena');
+  assert.equal(getMissionReturnTarget(ARENA_ORIGIN, null), 'arena');
+});
+
 test('challenge abort, briefing back, and result map return to Challenges', () => {
   assert.equal(getMissionReturnTarget(CHALLENGES_ORIGIN, 'heaps'), 'challenges', 'brief back and workflow abort');
   assert.equal(getMissionReturnTarget(CHALLENGES_ORIGIN, 'roadmap'), 'challenges', 'result map button');
@@ -52,4 +69,7 @@ test('normal Practice and Roadmap mission URLs keep their existing destinations'
   assert.equal(getNavigationOrigin(''), null);
   assert.equal(getNavigationOrigin('?topic=arrays'), null);
   assert.equal(appendWorkflowOrigin('/topic/arrays/practice', null), '/topic/arrays/practice');
+  assert.equal(getMissionReturnTarget(null, 'topic'), 'topic');
+  assert.equal(getMissionReturnTarget(null, 'roadmap'), 'roadmap');
+  assert.equal(getWorkflowHeader(null, 'run'), null);
 });
