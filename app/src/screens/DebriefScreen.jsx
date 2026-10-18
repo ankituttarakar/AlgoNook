@@ -4,7 +4,7 @@ import { useGame } from '../game/GameContext.jsx';
 import { levelTitle } from '../game/progression.js';
 import { sfx } from '../game/sfx.js';
 
-export default function DebriefScreen({ result, onNext, onReplay, onMap, onReview }) {
+export default function DebriefScreen({ result, onNext, onReplay, onMap, onReview, mapLabel = 'Sector map' }) {
   const { cleared, skills } = useGame();
   const { mission, earned, bonus, total, stars, mistakes, replay, review, levelUps } = result;
 
@@ -108,7 +108,7 @@ export default function DebriefScreen({ result, onNext, onReplay, onMap, onRevie
             ↺ Replay
           </button>
           <button onClick={() => { sfx.select(); onMap(); }} className="bb-btn bb-btn-ghost text-xs">
-            Sector map
+            {mapLabel}
           </button>
           <button onClick={() => { sfx.select(); onReview(); }} className="bb-btn bb-btn-ghost text-xs">
             Review mastery

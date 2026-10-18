@@ -1,6 +1,8 @@
 // Executable, Python-backed chapter problems. The same contracts feed the
 // learner flow and the authenticated trusted runner; Python is the only runtime
 // currently implemented by that runner.
+import { TOPICS } from './topics.js';
+
 const q = (text, correct, rationale, wrong) => ({
   prompt: text,
   options: [
@@ -46,7 +48,7 @@ export const CODING_PROBLEMS = [
     transfer: q('Transfer: for each day, return the best profit achievable by selling on that day.', 'Keep the same prefix minimum and append the best profit at each day.', 'The invariant still summarizes all legal earlier buy days.', [['Compare every pair of days independently.', 'That abandons the reusable prefix state and costs O(n²).'], ['Sort prices before scanning.', 'Sorting destroys the time order that defines a legal trade.']]),
   },
   {
-    id: 'binary-search-first', topic: 'searching', chapter: 'binary-search', skill: 'binary-search-boundary', title: 'First Position at Least Target', pattern: 'Lower bound / search-space reduction', complexity: 'O(log n) time · O(1) extra space',
+    id: 'binary-search-first', topic: 'searching', chapter: 'binary-search', skill: 'binary-search-boundary', title: 'First Position at Least Target', pattern: 'Lower bound / search-space reduction', complexity: 'O(log n) time · O(1) extra space', difficulty: 'Medium',
     statement: 'Given a sorted integer array and target, return the first index whose value is at least target. Return the array length if no such index exists.',
     constraints: ['0 ≤ nums.length ≤ 100,000', 'nums is sorted in non-decreasing order'],
     examples: [{ input: 'nums = [1, 2, 2, 4], target = 2', output: '1', explanation: 'Index 1 is the first position whose value is at least 2.' }],
@@ -106,7 +108,7 @@ export const CODING_PROBLEMS = [
     transfer: q('Transfer: compute the minimum depth to a leaf.', 'Use a traversal that handles a missing child carefully and chooses the shortest actual root-to-leaf path.', 'It uses the same recursive decomposition but has a different base condition when only one child exists.', [['Replace max with min for every node, including missing children.', 'A missing child is not a leaf path and must not make the answer zero.'], ['Count nodes in level order.', 'Breadth-first depth needs to stop at the first leaf, not count all nodes.']]),
   },
   {
-    id: 'kth-largest', topic: 'heaps', chapter: 'heaps', skill: 'heaps-kth-largest', title: 'Find the Kth Largest', pattern: 'Bounded min-heap', complexity: 'O(n log k) time · O(k) heap space',
+    id: 'kth-largest', topic: 'heaps', chapter: 'heaps', skill: 'heaps-kth-largest', title: 'Find the Kth Largest', pattern: 'Bounded min-heap', complexity: 'O(n log k) time · O(k) heap space', difficulty: 'Medium',
     statement: 'Given an integer list and k, return the kth largest value. Duplicates count as separate positions.',
     constraints: ['1 ≤ k ≤ values.length ≤ 100,000'],
     examples: [{ input: 'values = [3, 2, 1, 5, 6, 4], k = 2', output: '5', explanation: 'The sorted order is [6, 5, 4, 3, 2, 1].' }],
@@ -130,7 +132,7 @@ export const CODING_PROBLEMS = [
     transfer: q('Transfer: find the shortest number of edges from start to every reachable node.', 'Store a distance when first discovering each node during BFS.', 'BFS visits nodes in nondecreasing distance order, so first discovery is shortest.', [['Use DFS and record the first path found.', 'DFS may first reach a node by a longer route.'], ['Sort adjacency lists by node id.', 'Neighbor order does not determine shortest path length.']]),
   },
   {
-    id: 'subsets', topic: 'recursion', chapter: 'backtracking', skill: 'backtracking-subsets', title: 'Generate Every Subset', pattern: 'Backtracking / include-or-skip', complexity: 'O(n · 2ⁿ) time including output · O(n) recursion space',
+    id: 'subsets', topic: 'recursion', chapter: 'backtracking', skill: 'backtracking-subsets', title: 'Generate Every Subset', pattern: 'Backtracking / include-or-skip', complexity: 'O(n · 2ⁿ) time including output · O(n) recursion space', difficulty: 'Medium',
     statement: 'Given a list of distinct integers, return every subset exactly once. The order of subsets does not matter.',
     constraints: ['0 ≤ nums.length ≤ 10', 'All values are distinct'],
     examples: [{ input: 'nums = [1, 2]', output: '[[], [1], [2], [1, 2]]', explanation: 'Each value is either included or skipped.' }],
@@ -153,15 +155,98 @@ export const CODING_PROBLEMS = [
     explain: q('What is the transition for ways[i]?', 'ways[i] = ways[i − 1] + ways[i − 2].', 'Every route ends with exactly one of the allowed final jumps.', [['ways[i] = ways[i − 1] × ways[i − 2].', 'The route sets are disjoint alternatives, so counts add.'], ['ways[i] = i.', 'The number of routes grows by combining earlier route counts.']]),
     transfer: q('Transfer: count ways when you may climb 1, 2, or 3 steps.', 'Use three base counts and add the previous three states for each next step.', 'The DP state is still routes to a step; the allowed final moves define the transition.', [['Keep only the previous one state.', 'A three-step move depends on i−3 as well.'], ['Multiply the previous counts.', 'Each last-jump choice is an alternative, so counts are summed.']]),
   },
+  {
+    id: 'queue-rotate', topic: 'queues', chapter: 'stacks-queues', skill: 'queues-rotation', title: 'Rotate a Queue', pattern: 'Queue / front-to-back rotation', complexity: 'O(n + k) time · O(n) output space', difficulty: 'Easy',
+    statement: 'Given a queue as a list and a non-negative integer k, move the first k items to the back in order and return the resulting queue. If k exceeds the queue length, continue cycling from the front.',
+    constraints: ['0 ≤ queue.length ≤ 100,000', '0 ≤ k ≤ 1,000,000', 'Queue values are integers'],
+    examples: [{ input: 'queue = [1, 2, 3, 4], k = 2', output: '[3, 4, 1, 2]', explanation: 'Dequeue 1, then 2, and enqueue each at the back.' }],
+    args: ['queue', 'k'], cases: [{ id: 'two-rotations', queue: [1, 2, 3, 4], k: 2, expected: [3, 4, 1, 2] }, { id: 'wrap-around', queue: [1, 2, 3], k: 5, expected: [3, 1, 2] }, { id: 'empty-queue', queue: [], k: 4, expected: [] }],
+    starter: 'def rotateQueue(queue, k):\n    # Repeatedly move the front item to the back\n    pass\n',
+    prompt: 'Implement rotateQueue(queue, k). Reduce k modulo the queue length, then move that many front values to the back.',
+    intuition: 'A queue exposes only its front for removal and its back for insertion. Each rotation preserves the relative order of all moved values.',
+    explain: q('What does one queue rotation do?', 'Remove the front item and append it to the back.', 'Repeated front-to-back moves rotate the queue without changing order among the moved items.', [['Remove the back item and append it at the front.', 'That operation rotates in the opposite direction.'], ['Sort the queue values.', 'A queue preserves arrival order and rotation is independent of value order.']]),
+    transfer: q('Transfer: rotate the queue right by r positions.', 'A right rotation by r is equivalent to moving the first n − (r mod n) values to the back.', 'The same front-to-back primitive handles either direction after converting the count.', [['Sort descending.', 'Rotation preserves order and does not compare values.'], ['Reverse every element.', 'Reversal changes the order more than a rotation does.']]),
+  },
+  {
+    id: 'bst-search', topic: 'bst', chapter: 'trees', skill: 'bst-search', title: 'Search a Binary Search Tree', pattern: 'BST ordering invariant', complexity: 'O(h) time · O(1) extra space', difficulty: 'Medium',
+    statement: 'A BST is encoded in level order with null for missing children. Return true if target occurs in the tree. Use the BST ordering rule to choose which child can contain the target.',
+    constraints: ['0 ≤ tree.length ≤ 10,000', 'Values are distinct integers', 'The level-order encoding represents a valid BST'],
+    examples: [{ input: 'tree = [8, 3, 10, 1, 6, null, 14], target = 6', output: 'true', explanation: '6 is less than 8, then greater than 3, so search continues right to 6.' }],
+    args: ['tree', 'target'], cases: [{ id: 'present', tree: [8, 3, 10, 1, 6, null, 14], target: 6, expected: true }, { id: 'absent', tree: [8, 3, 10, 1, 6, null, 14], target: 7, expected: false }, { id: 'empty', tree: [], target: 4, expected: false }],
+    starter: 'def searchBst(tree, target):\n    # Follow only the child that can contain target\n    pass\n',
+    prompt: 'Implement searchBst(tree, target). Follow level-order child indices (2i+1, 2i+2), stopping when the current node is null or equals target.',
+    intuition: 'At each node, BST ordering tells you that every value in one subtree is on one side of the node value, so the other subtree can be discarded.',
+    explain: q('If target is smaller than a BST node, which branch can contain it?', 'Only the left subtree.', 'The BST invariant puts smaller values to the left and larger values to the right.', [['Only the right subtree.', 'Right-subtree values are greater than the current node.'], ['Both subtrees must be scanned.', 'That ignores the ordering information that makes BST search efficient.']]),
+    transfer: q('Transfer: insert a missing target into a BST.', 'Follow the same comparisons until a null child is reached, then attach the new node there.', 'Search and insertion share the same path; insertion uses the first missing child.', [['Rebalance by sorting all values first.', 'A basic BST insertion does not require sorting the whole tree.'], ['Always attach at the root.', 'That breaks the ordering invariant for existing nodes.']]),
+  },
+  {
+    id: 'anagram-check', topic: 'strings', chapter: 'arrays', skill: 'strings-frequency', title: 'Check Anagrams', pattern: 'String frequency counting', complexity: 'O(n) time · O(1) alphabet space', difficulty: 'Easy',
+    statement: 'Given two lowercase English strings, return true when they contain exactly the same characters with the same frequencies.',
+    constraints: ['0 ≤ s.length, t.length ≤ 100,000', 's and t contain only lowercase English letters'],
+    examples: [{ input: 's = "listen", t = "silent"', output: 'true', explanation: 'Both strings contain the same six letters with matching counts.' }],
+    args: ['s', 't'], cases: [{ id: 'anagram', s: 'listen', t: 'silent', expected: true }, { id: 'different-counts', s: 'aab', t: 'abb', expected: false }, { id: 'empty', s: '', t: '', expected: true }],
+    starter: 'def areAnagrams(s, t):\n    # Compare character counts\n    pass\n',
+    prompt: 'Implement areAnagrams(s, t) with a frequency map or fixed 26-slot count array.',
+    intuition: 'Anagrams have identical multiplicities, so incrementing counts for one string and decrementing for the other leaves every count at zero.',
+    explain: q('Why is comparing character frequencies sufficient?', 'The strings contain the same multiset of characters exactly when every character count matches.', 'Order does not matter, but multiplicity does.', [['Only the two lengths matter.', 'Equal lengths do not guarantee matching characters.'], ['The sorted order of characters matters.', 'Sorting can work, but frequency counts directly capture the contract.']]),
+    transfer: q('Transfer: test whether two strings have the same characters ignoring case.', 'Normalize both strings to the same case, then compare their character frequencies.', 'Normalization changes representation; the frequency invariant stays the same.', [['Compare characters at identical positions.', 'Anagrams may place the same characters in a different order.'], ['Compare only the first character.', 'Every character multiplicity contributes to the result.']]),
+  },
+  {
+    id: 'merge-sort-values', topic: 'sorting', chapter: 'binary-search', roadmapNodeId: 'arrays', skill: 'sorting-merge-sort', title: 'Merge Sort Values', pattern: 'Divide, sort, and merge', complexity: 'O(n log n) time · O(n) extra space', difficulty: 'Medium',
+    statement: 'Return a new list containing the integer input values in non-decreasing order. Implement merge sort rather than calling a built-in sorting function.',
+    constraints: ['0 ≤ values.length ≤ 100,000', '−1,000,000 ≤ values[i] ≤ 1,000,000'],
+    examples: [{ input: 'values = [5, 2, 3, 1]', output: '[1, 2, 3, 5]', explanation: 'Sorted halves are merged by repeatedly taking the smaller front value.' }],
+    args: ['values'], cases: [{ id: 'mixed', values: [5, 2, 3, 1], expected: [1, 2, 3, 5] }, { id: 'duplicates', values: [3, 1, 3, 2], expected: [1, 2, 3, 3] }, { id: 'empty', values: [], expected: [] }],
+    starter: 'def mergeSortValues(values):\n    # Sort halves recursively, then merge them\n    pass\n',
+    prompt: 'Implement mergeSortValues(values) with recursive halves and a linear merge. Do not mutate the input or call a built-in sort.',
+    intuition: 'Halving creates logarithmically many levels. At each level, merging touches each value once, giving O(n log n) time.',
+    explain: q('Why is merging two sorted halves linear?', 'Each output step consumes one front value, so each input value is copied once.', 'The merge work per recursion level is proportional to n.', [['Every output step searches both halves from the beginning.', 'That repeated search can make merging quadratic.'], ['Only the largest values need to be compared.', 'Each front comparison determines the next smallest output value.']]),
+    transfer: q('Transfer: merge two already sorted lists.', 'Use two front indices, append the smaller current value, then append the remaining tail.', 'This is the merge primitive at the heart of merge sort.', [['Concatenate and reverse.', 'That does not generally produce sorted order.'], ['Insert each item at index zero.', 'That reverses order and repeatedly shifts values.']]),
+  },
+  {
+    id: 'longest-increasing-subsequence', topic: 'dp', chapter: 'dynamic-programming', skill: 'dp-longest-increasing-subsequence', title: 'Longest Increasing Subsequence', pattern: 'Dynamic programming / patience sorting', complexity: 'O(n log n) time · O(n) space', difficulty: 'Hard',
+    statement: 'Return the length of the longest strictly increasing subsequence of values. A subsequence may skip elements but must keep their original order.',
+    constraints: ['0 ≤ values.length ≤ 2,000', '−1,000,000 ≤ values[i] ≤ 1,000,000'],
+    examples: [{ input: 'values = [10, 9, 2, 5, 3, 7, 101, 18]', output: '4', explanation: 'One longest subsequence is [2, 3, 7, 18].' }],
+    args: ['values'], cases: [{ id: 'mixed', values: [10, 9, 2, 5, 3, 7, 101, 18], expected: 4 }, { id: 'strict-equality', values: [2, 2, 2], expected: 1 }, { id: 'empty', values: [], expected: 0 }],
+    starter: 'def lengthOfLIS(values):\n    # Track the smallest tail for each subsequence length\n    pass\n',
+    prompt: 'Implement lengthOfLIS(values) using a tails list and binary search. Replace the first tail greater than or equal to each value; the tails length is the answer.',
+    intuition: 'For each subsequence length, the smallest possible tail leaves the most room for future values. Binary search finds the tail to replace.',
+    explain: q('Why replace the first tail greater than or equal to the current value?', 'It preserves strict increase while keeping the smallest tail for that length.', 'A smaller tail can extend with at least as many future values.', [['Append every value unconditionally.', 'That counts input length, even when values decrease.'], ['Replace the largest tail smaller than the value.', 'That does not maintain one minimal tail per subsequence length.']]),
+    transfer: q('Transfer: find the longest non-decreasing subsequence.', 'Use the first tail strictly greater than the current value instead of the first greater-than-or-equal tail.', 'Changing the binary-search boundary allows equal values to extend the subsequence.', [['Sort the input first.', 'Sorting destroys the required original order.'], ['Count distinct values.', 'Distinctness does not represent an ordered subsequence.']]),
+  },
 ];
+
+const VALID_DIFFICULTIES = new Set(['Easy', 'Medium', 'Hard']);
+const VALID_TOPIC_IDS = new Set(TOPICS.map(({ id }) => id));
+const CODING_PROBLEM_IDS = new Set();
+for (const problem of CODING_PROBLEMS) {
+  if (!problem.id || CODING_PROBLEM_IDS.has(problem.id)) throw new Error(`Duplicate or missing coding problem id: ${problem.id}`);
+  CODING_PROBLEM_IDS.add(problem.id);
+  if (!VALID_TOPIC_IDS.has(problem.topic) || !problem.chapter || !problem.skill || !problem.title || !problem.statement
+    || !Array.isArray(problem.constraints) || !problem.constraints.length
+    || !Array.isArray(problem.examples) || !problem.examples.length
+    || !Array.isArray(problem.args) || !problem.args.length
+    || !Array.isArray(problem.cases) || problem.cases.length < 3
+    || !problem.starter || !problem.prompt || !problem.intuition || !problem.explain || !problem.transfer) {
+    throw new Error(`Incomplete coding problem metadata: ${problem.id}`);
+  }
+  if (problem.difficulty && !VALID_DIFFICULTIES.has(problem.difficulty)) throw new Error(`Invalid coding problem difficulty: ${problem.id}`);
+  if (new Set(problem.cases.map((item) => item.id)).size !== problem.cases.length
+    || problem.cases.some((item) => !item.id || item.expected === undefined || problem.args.some((argument) => !(argument in item)))) {
+    throw new Error(`Invalid trusted test case: ${problem.id}`);
+  }
+}
 
 export function makeCodingMission(problem) {
   const choice = (id, section, heading, content) => ({ id, section, heading, type: 'choice', xpLabel: section, nextLabel: 'Next', ...content });
   return {
-    id: `code-${problem.id}`, topic: problem.topic, chapter: problem.chapter || problem.topic, codingProblem: true, kind: 'standard', title: problem.title.toUpperCase(), skill: problem.skill,
+    id: `code-${problem.id}`, topic: problem.topic, chapter: problem.chapter || problem.topic, roadmapNodeId: problem.roadmapNodeId, codingProblem: true, kind: 'standard', title: problem.title.toUpperCase(), skill: problem.skill,
     brief: `Learn the ${problem.pattern} pattern, implement it, and justify the state that makes it correct.`, learningFlow: true,
+    // These notes come directly from the problem's verified invariant and complexity metadata.
+    intel: [problem.intuition, problem.complexity].filter((note) => typeof note === 'string' && note.trim()),
     problemFlow: {
-      id: `${problem.topic.toUpperCase()} · CODE`, difficulty: 'Easy', title: problem.title,
+      id: `${problem.topic.toUpperCase()} · CODE`, difficulty: problem.difficulty || 'Easy', title: problem.title,
       steps: [
         { id: 'problem', section: 'PROBLEM', heading: 'Read the specification', type: 'problem', xpLabel: 'PROBLEM REVIEW', difficulty: 'easy', statement: problem.statement, constraints: problem.constraints, examples: problem.examples, complexity: problem.complexity },
         choice('pattern', 'PATTERN', 'Recognize the reusable pattern', { prompt: `Which pattern is central to this problem?`, options: [{ text: problem.pattern, correct: true, rationale: problem.intuition }, { text: 'Sort the input and rescan it repeatedly', correct: false, rationale: 'This does not use the structural invariant described by the problem.' }, { text: 'Try every possible pair of states', correct: false, rationale: 'That usually repeats work and misses the intended scalable pattern.' }] }),

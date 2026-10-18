@@ -30,6 +30,11 @@ CHAPTER_PROBLEMS = {
     "reachable-nodes": ("reachableCount", ["graph", "start"], "json"),
     "subsets": ("subsets", ["nums"], "unordered-integer-subsets"),
     "climb-stairs": ("climbStairs", ["n"], "json"),
+    "queue-rotate": ("rotateQueue", ["queue", "k"], "integer-list"),
+    "bst-search": ("searchBst", ["tree", "target"], "bool"),
+    "anagram-check": ("areAnagrams", ["s", "t"], "bool"),
+    "merge-sort-values": ("mergeSortValues", ["values"], "integer-list"),
+    "longest-increasing-subsequence": ("lengthOfLIS", ["values"], "json"),
 }
 
 def is_integer_list(value):
@@ -37,7 +42,7 @@ def is_integer_list(value):
 
 def valid_chapter_case(problem_id, case):
     expected = case.get("expected")
-    if problem_id in ("max-profit", "binary-search-first", "window-max-sum", "kth-largest", "climb-stairs", "reachable-nodes", "tree-max-depth"):
+    if problem_id in ("max-profit", "binary-search-first", "window-max-sum", "kth-largest", "climb-stairs", "reachable-nodes", "tree-max-depth", "longest-increasing-subsequence"):
         if type(expected) is not int:
             return False
     if problem_id in ("max-profit", "window-max-sum"):
@@ -65,6 +70,20 @@ def valid_chapter_case(problem_id, case):
         return is_integer_list(case.get("nums")) and len(case["nums"]) <= 10 and isinstance(expected, list) and all(is_integer_list(item) for item in expected)
     if problem_id == "climb-stairs":
         return type(case.get("n")) is int and 1 <= case["n"] <= 45
+    if problem_id == "queue-rotate":
+        return is_integer_list(case.get("queue")) and type(case.get("k")) is int and 0 <= case["k"] <= 1000000 and is_integer_list(expected)
+    if problem_id == "bst-search":
+        tree = case.get("tree")
+        return isinstance(tree, list) and len(tree) <= 10000 and all(value is None or type(value) is int for value in tree) and (not tree or tree[0] is not None) and type(case.get("target")) is int and type(expected) is bool
+    if problem_id == "anagram-check":
+        s, t = case.get("s"), case.get("t")
+        lowercase = lambda value: isinstance(value, str) and len(value) <= 10000 and all("a" <= char <= "z" for char in value)
+        return lowercase(s) and lowercase(t) and type(expected) is bool
+    if problem_id == "merge-sort-values":
+        values = case.get("values")
+        return is_integer_list(values) and is_integer_list(expected) and sorted(values) == expected
+    if problem_id == "longest-increasing-subsequence":
+        return is_integer_list(case.get("values")) and len(case["values"]) <= 2000 and type(expected) is int and 0 <= expected <= len(case["values"])
     return False
 
 def equivalent_result(problem_id, actual, expected):

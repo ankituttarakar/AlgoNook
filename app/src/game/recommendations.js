@@ -1,7 +1,7 @@
 // Deterministic practice selection derived only from the hydrated learning record.
 import { ROADMAP_NODES, isChapterComplete } from '../data/roadmap.js';
 import { GAME_LAB_BY_NODE } from '../data/games/index.js';
-import { MISSION_MAP, missionsOfTopic, isUnlocked } from '../data/missions/index.js';
+import { MISSIONS, MISSION_MAP, missionsOfTopic, isUnlocked } from '../data/missions/index.js';
 import { computeNodeState } from '../data/roadmap.js';
 import { getPracticeForNode } from '../data/practice.js';
 
@@ -9,7 +9,8 @@ const MASTERY_RANK = { introduced: 0, guided: 1, practicing: 2, independent: 3, 
 const RECENT_WINDOW = 14 * 24 * 60 * 60 * 1000;
 
 function nodeMissions(node) {
-  return (node.missionTopics || (node.topicId ? [node.topicId] : [])).flatMap(missionsOfTopic);
+  const mapped = (node.missionTopics || (node.topicId ? [node.topicId] : [])).flatMap(missionsOfTopic);
+  return [...new Map([...mapped, ...MISSIONS.filter((mission) => mission.roadmapNodeId === node.id)].map((mission) => [mission.id, mission])).values()];
 }
 
 function nodeForSkill(skillId) {

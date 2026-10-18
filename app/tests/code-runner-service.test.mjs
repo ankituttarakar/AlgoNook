@@ -89,6 +89,47 @@ test('authenticated API request uses signed runner and runner-owned trusted test
   assert.deepEqual(executionRequest.testCases, problem.testCases);
 });
 
+test('new topic challenges are accepted only through registered authenticated trusted-test contracts', async () => {
+  const ids = ['queue-rotate', 'bst-search', 'anagram-check', 'merge-sort-values', 'longest-increasing-subsequence'];
+  for (const id of ids) {
+    const problem = getCodeProblemById(id);
+    assert.ok(problem, `${id} is registered`);
+    let runnerProblem;
+    const result = await handleExecuteCode({ language: 'python', sourceCode: 'def solution():\n    pass', problemId: id }, {}, {
+      CLERK_SECRET_KEY: 'unit-test-clerk-secret', NODE_ENV: 'test',
+    }, {
+      authenticate: async () => 'user_test_123',
+      reserve: async () => ({ admitted: true, leaseId: 'lease-test' }),
+      release: async () => {},
+      execute: async ({ problem: selected }) => { runnerProblem = selected; return { status: 200, result: trustedResult(selected) }; },
+    });
+    assert.equal(result.status, 200, `${id} reaches the trusted runner`);
+    assert.equal(runnerProblem.id, id);
+    assert.equal(result.data.summary.total, problem.testCases.length);
+    assert.ok(problem.testCases.length >= 3);
+  }
+});
+
+test('incorrect submissions receive status feedback without trusted expected or actual values', async () => {
+  const problem = getCodeProblemById('queue-rotate');
+  const result = await handleExecuteCode({ language: 'python', sourceCode: 'def rotateQueue(queue, k):\n    return queue', problemId: problem.id }, {}, {
+    CLERK_SECRET_KEY: 'unit-test-clerk-secret', NODE_ENV: 'test',
+  }, {
+    authenticate: async () => 'user_test_123',
+    reserve: async () => ({ admitted: true, leaseId: 'lease-test' }),
+    release: async () => {},
+    execute: async () => ({ status: 200, result: {
+      ...trustedResult(problem), status: 'WRONG_ANSWER', summary: { passed: 0, total: 1 },
+      tests: [{ id: 'private-case', status: 'WRONG_ANSWER', expected: [2, 1], actual: [1, 2], stdout: '[1, 2]', stderr: '' }],
+    } }),
+  });
+  assert.equal(result.status, 200);
+  assert.equal(result.data.tests[0].status, 'WRONG_ANSWER');
+  assert.equal(Object.hasOwn(result.data.tests[0], 'expected'), false);
+  assert.equal(Object.hasOwn(result.data.tests[0], 'actual'), false);
+  assert.equal(Object.hasOwn(result.data.tests[0], 'stdout'), false);
+});
+
 test('API rejects unauthenticated, unknown-problem, and learner-supplied test requests', async () => {
   const baseEnv = { CLERK_SECRET_KEY: 'unit-test-clerk-secret' };
   const baseRequest = { language: 'python', sourceCode: 'def containsDuplicate(nums):\n    return False', problemId: 'contains-duplicate' };
@@ -149,7 +190,10 @@ test('execution API enforces authenticated admission before invoking the runner'
     release: async () => { active -= 1; releases += 1; },
     execute: async () => {
       runnerCalls += 1;
-      return { status: 200, result: { status: 'PASSED' } };
+      return { status: 200, result: {
+        status: 'PASSED', summary: { passed: 1, total: 1 }, tests: [{ id: 'registered-case', status: 'PASSED' }],
+        stdout: '', stderr: '', executionTimeMs: 1,
+      } };
     },
   };
   const request = {
