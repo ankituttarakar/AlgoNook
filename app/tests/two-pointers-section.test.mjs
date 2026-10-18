@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { TOPICS } from '../src/data/topics.js';
 import { MISSION_MAP, missionsOfTopic } from '../src/data/missions/index.js';
-import { TWO_SUM_SORTED_PROBLEM } from '../api/code/problems/twoSumSorted.mjs';
+import { TWO_SUM_SORTED_PROBLEM } from '../server/code/problems/twoSumSorted.mjs';
 import { getPracticeForNode } from '../src/data/practice.js';
 import { GAME_LAB_BY_NODE } from '../src/data/games/index.js';
 import { ROADMAP_NODE_MAP } from '../src/data/roadmap.js';

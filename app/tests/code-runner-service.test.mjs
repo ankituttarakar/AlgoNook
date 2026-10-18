@@ -4,15 +4,15 @@ import { Readable } from 'node:stream';
 import test from 'node:test';
 import { createRunnerServer } from '../server/code/runner-service.mjs';
 import { createRunnerSignature } from '../server/code/runnerProtocol.mjs';
-import { executePythonJob } from '../api/code/runnerClient.mjs';
+import { executePythonJob } from '../server/code/runnerClient.mjs';
 import { handleExecuteCode } from '../api/code/execute.ts';
 import {
   EXECUTION_CONCURRENCY_LIMIT,
   EXECUTION_REQUEST_LIMIT,
   releaseCodeExecution,
   reserveCodeExecution,
-} from '../api/code/executionAdmission.mjs';
-import { getCodeProblemById } from '../api/code/problems/index.mjs';
+} from '../server/code/executionAdmission.mjs';
+import { getCodeProblemById } from '../server/code/problems/index.mjs';
 
 const SECRET = 'test-only-runner-secret-32-bytes-minimum';
 

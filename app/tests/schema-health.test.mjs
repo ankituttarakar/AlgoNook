@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { checkDatabaseSchema, CURRENT_SCHEMA_VERSION } from '../api/schemaHealth.mjs';
+import { checkDatabaseSchema, CURRENT_SCHEMA_VERSION } from '../server/schemaHealth.mjs';
 import { applyTrackedUnit, listMigrations, splitSqlStatements } from '../scripts/migrate.js';
 
 function schemaSql({
