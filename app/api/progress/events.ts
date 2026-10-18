@@ -1,9 +1,9 @@
 import { neon } from '@neondatabase/serverless';
-import { authenticateRequest } from '../clerk-auth.mjs';
-import { checkDatabaseSchema } from '../schemaHealth.mjs';
-import { executePythonJob } from '../code/runnerClient.mjs';
-import { releaseCodeExecution, reserveCodeExecution } from '../code/executionAdmission.mjs';
-import { getCodeProblemById } from '../code/problems/index.mjs';
+import { authenticateRequest } from '../../server/clerk-auth.mjs';
+import { checkDatabaseSchema } from '../../server/schemaHealth.mjs';
+import { executePythonJob } from '../../server/code/runnerClient.mjs';
+import { releaseCodeExecution, reserveCodeExecution } from '../../server/code/executionAdmission.mjs';
+import { getCodeProblemById } from '../../server/code/problems/index.mjs';
 import { MISSION_MAP, missionsOfTopic } from '../../src/data/missions/index.js';
 import { GAME_LAB_BY_NODE } from '../../src/data/games/index.js';
 import { ROADMAP_NODE_MAP, ROADMAP_NODES } from '../../src/data/roadmap.js';

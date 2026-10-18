@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { createRunnerSignature } from '../../server/code/runnerProtocol.mjs';
+import { createRunnerSignature } from './runnerProtocol.mjs';
 
 const MAX_RESPONSE_BYTES = 512 * 1024;
 const REMOTE_TIMEOUT_MS = 27_000;
@@ -82,7 +82,7 @@ export async function executePythonJob({ sourceCode, problem, trace = false, env
   const runnerUrl = env.CODE_RUNNER_URL;
   if (!runnerUrl && env.NODE_ENV !== 'production' && env.VERCEL !== '1') {
     // Local development may keep using Docker on the developer's machine.
-    const { executePythonSandbox } = await import('../../server/code/pythonRunner.mjs');
+    const { executePythonSandbox } = await import('./pythonRunner.mjs');
     return {
       status: 200,
       result: await executePythonSandbox({ sourceCode, problemId: problem.id, testCases: problem.testCases, trace }),

@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
-import { authenticateRequest } from './clerk-auth.mjs';
-import { checkDatabaseSchema } from './schemaHealth.mjs';
+import { authenticateRequest } from '../server/clerk-auth.mjs';
+import { checkDatabaseSchema } from '../server/schemaHealth.mjs';
 import { DEFAULT_CALLSIGN, normalizeCallsign } from '../src/lib/callsign.mjs';
 
 export interface SyncUserPayload {

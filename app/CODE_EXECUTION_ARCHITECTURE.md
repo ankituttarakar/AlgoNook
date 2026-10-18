@@ -35,7 +35,7 @@ Coding mission and review submissions through `POST /api/progress/events` use th
 }
 ```
 
-The request body is limited to 400 KiB by the Vercel function parser; Python source is limited to 64 KiB UTF-8. Unknown fields, including learner-supplied tests, are rejected. The API resolves `problemId` through `api/code/problems/index.mjs`; arbitrary commands, runner image names, shell arguments, and file paths are not accepted.
+The request body is limited to 400 KiB by the Vercel function parser; Python source is limited to 64 KiB UTF-8. Unknown fields, including learner-supplied tests, are rejected. The API resolves `problemId` through `server/code/problems/index.mjs`; arbitrary commands, runner image names, shell arguments, and file paths are not accepted.
 
 After authentication and validation, the API admits up to 12 executions per verified Clerk user in a fixed 60-second window and at most 2 concurrent runs for that user. Admission is stored atomically in Neon so separate Vercel instances share the same limits. Execution leases expire after 35 seconds (the remote runner request timeout is 27 seconds) and are released after the request completes. Rejected requests receive HTTP 429 with `Retry-After`. Local development without `DATABASE_URL` uses a bounded process-local fallback; production/Vercel fails closed if shared admission storage is unavailable.
 
@@ -63,11 +63,11 @@ npm run sandbox:build
 
 Configure the same randomly generated secret of at least 32 bytes as `CODE_RUNNER_SECRET` on the runner host and the Vercel project. Configure Vercel `CODE_RUNNER_URL` to the HTTPS reverse-proxy origin for the runner service. Keep this secret server-only; do not use a `VITE_` prefix. Start the service under a process supervisor and use the reverse proxy for TLS, request rate limits, and network access control. The service's default listener is loopback; if the proxy runs in a separate container, bind only to the private container network using `RUNNER_BIND_ADDRESS` and keep that network inaccessible to the public internet.
 
-Build the Python sandbox image on every runner host before accepting requests. A missing image or unavailable Docker daemon returns a clean sandbox failure. The runner image tag is pinned in `api/code/pythonRunner.mjs` (`algonook-python-runner:3.12.11`).
+Build the Python sandbox image on every runner host before accepting requests. A missing image or unavailable Docker daemon returns a clean sandbox failure. The runner image tag is pinned in `server/code/pythonRunner.mjs` (`algonook-python-runner:3.12.11`).
 
 ## Isolation retained
 
-`api/code/pythonRunner.mjs` uses fixed Docker argument arrays with `shell: false`. The learner container keeps the existing restrictions:
+`server/code/pythonRunner.mjs` uses fixed Docker argument arrays with `shell: false`. The learner container keeps the existing restrictions:
 
 - no network (`--network none`)
 - read-only root filesystem and a bounded temporary filesystem

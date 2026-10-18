@@ -1,8 +1,8 @@
-import { authenticateRequest } from '../clerk-auth.mjs';
-import { checkDatabaseSchema } from '../schemaHealth.mjs';
-import { executePythonJob, sandboxUnavailable } from './runnerClient.mjs';
-import { releaseCodeExecution, reserveCodeExecution } from './executionAdmission.mjs';
-import { getCodeProblemById } from './problems/index.mjs';
+import { authenticateRequest } from '../../server/clerk-auth.mjs';
+import { checkDatabaseSchema } from '../../server/schemaHealth.mjs';
+import { executePythonJob, sandboxUnavailable } from '../../server/code/runnerClient.mjs';
+import { releaseCodeExecution, reserveCodeExecution } from '../../server/code/executionAdmission.mjs';
+import { getCodeProblemById } from '../../server/code/problems/index.mjs';
 
 const MAX_SOURCE_BYTES = 64 * 1024;
 
